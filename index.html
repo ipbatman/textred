@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ТекстРед — проверка текста на стоп-слова, штампы и ошибки</title>
+  <meta name="description" content="Бесплатный онлайн-редактор для проверки текстов: стоп-слова, канцелярит, штампы, орфография (Яндекс) и грамматика (LanguageTool).">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="ТекстРед — проверка текста">
+  <meta property="og:description" content="Стоп-слова, штампы, канцелярит, орфография и грамматика в одном редакторе.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ru_RU">
+
+  <!-- Favicon (emoji) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <div class="editor-panel">
+    <div class="editor-toolbar">
+      <button type="button" id="btn-clear">✕ Очистить</button>
+      <button type="button" id="btn-example">📝 Пример</button>
+      <div class="check-buttons">
+        <button type="button" class="check-btn active" id="btn-style">🔍 Стоп-слова</button>
+        <button type="button" class="check-btn" id="btn-regex">📐 Regex</button>
+        <button type="button" class="check-btn" id="btn-speller">✏️ Яндекс</button>
+        <button type="button" class="check-btn" id="btn-lt">📝 LanguageTool</button>
+      </div>
+      <span class="stats" id="stats">0 слов · 0 знаков</span>
+      <span class="spelling-status" id="spellingStatus"></span>
+    </div>
+    <div class="editor-wrapper" id="editorWrapper">
+      <div id="overlay"></div>
+      <textarea id="editor" placeholder="Вставьте или напишите текст для проверки…" spellcheck="false"></textarea>
+    </div>
+  </div>
+</div>
+
+<div class="result-panel">
+  <div class="result-card">
+    <h3>📊 Оценка</h3>
+    <div class="score-row">
+      <div class="score-item">
+        <div class="score-label">📝 Стиль</div>
+        <div class="score-value" id="styleScore">—</div>
+        <div class="progress-bar">
+          <div class="fill" id="styleProgressFill" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="score-item">
+        <div class="score-label">📐 Грамматика</div>
+        <div class="score-value" id="grammarScore">—</div>
+        <div class="progress-bar">
+          <div class="fill" id="grammarProgressFill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+    <p class="score-comment" id="scoreComment">Введите текст для анализа</p>
+  </div>
+  <div class="result-card">
+    <h3>🔍 Проблемы</h3>
+    <div class="errors-badges" id="errorsBadges"></div>
+    <div class="error-dropdown" id="errorDropdown">
+      <ul class="error-dropdown-list" id="errorDropdownList"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="custom-tooltip" id="tooltip">
+  <div class="custom-tooltip-arrow"></div>
+  <div class="custom-tooltip-content"></div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
