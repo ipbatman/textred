@@ -29,7 +29,7 @@ body {
   line-height: 1.6;
 }
 
-.container {
+/* .container {
   max-width: 100%;
   width: 100%;
   margin: 0;
@@ -37,14 +37,24 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 24px;
-}
+  box-sizing: border-box;
+} */
 
 @media (max-width: 860px) {
-  .container {
+  /* .container {
     grid-template-columns: 1fr;
     padding: 12px;
+    width: 100%;
+    box-sizing: border-box;
+  } */
+  .editor-panel {
+    width: 100% !important;
+    max-width: 100%;
   }
-  .editor-panel { width: 100% !important; }
+  #editor {
+    width: 100% !important;
+    max-width: 100%;
+  }
 }
 
 .editor-panel {
@@ -55,6 +65,8 @@ body {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column; /* важно для растягивания вложенных элементов */
 }
 
 .editor-toolbar {
@@ -95,6 +107,10 @@ body {
 .editor-wrapper {
   position: relative;
   min-height: 420px;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 #overlay,
@@ -112,18 +128,28 @@ body {
 
 #overlay {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
   color: var(--text);
   overflow: hidden;
   pointer-events: none;
   z-index: 1;
   visibility: hidden;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 #editor {
   position: relative;
-  width: 100%;
+  display: block;          /* ← убираем inline-поведение textarea */
+  width: 100% !important;  /* ← принудительно на всю ширину */
   min-height: 420px;
+  flex: 1;                 /* ← растягиваем по высоте внутри flex-обёртки */
   outline: none;
   background: transparent;
   overflow-y: auto;
@@ -131,6 +157,10 @@ body {
   z-index: 2;
   color: var(--text);
   caret-color: var(--text);
+  margin: 0;               /* ← сбрасываем возможные дефолтные отступы */
+  padding: 20px;
+  border: none;
+  box-sizing: border-box;
 }
 
 .editor-wrapper.highlight-active #overlay {
