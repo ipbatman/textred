@@ -230,24 +230,47 @@ function analyzeGrammar(text) {
 
 async function checkSpelling(text) {
   if (!text.trim()) return { errors: [], suggestions: {} };
+
+  // Разбиваем текст на чанки по 9500 символов (с запасом до лимита 10000)
+  const chunkSize = 9500;
+  const chunks = [];
+  for (let i = 0; i < text.length; i += chunkSize) {
+    chunks.push(text.slice(i, i + chunkSize));
+  }
+
+  const allErrors = [];
+  const suggestions = {};
+
   try {
-    const url = 'https://speller.yandex.net/services/spellservice.json/checkText?text='
-      + encodeURIComponent(text) + '&lang=ru&options=5';
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('API error');
-    const errors = await response.json();
+    // Обрабатываем чанки последовательно, чтобы не перегружать API
+    for (const chunk of chunks) {
+      const response = await fetch(
+        'https://speller.yandex.net/services/spellservice.json/checkText',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'text=' + encodeURIComponent(chunk) + '&lang=ru&options=5'
+        }
+      );
+      if (!response.ok) throw new Error('API error: ' + response.status);
+      const errors = await response.json();
+      allErrors.push(...errors);
+    }
+
+    // Группируем по словам
     const grouped = {};
-    const suggestions = {};
-    for (const err of errors) {
+    for (const err of allErrors) {
       if (!grouped[err.word]) grouped[err.word] = { word: err.word, count: 0 };
       grouped[err.word].count++;
       suggestions[err.word.toLowerCase()] = err.s || [];
     }
+
     return {
       errors: Object.values(grouped).sort((a, b) => b.count - a.count),
       suggestions
     };
   } catch (e) {
+    console.warn('Speller API error:', e);
     return { errors: [], suggestions: {}, failed: true };
   }
 }
