@@ -78,8 +78,8 @@ const CAT_INFO = {
   possessive: { name: 'Притяжательное местоимение', badge: 'badge-possessive' },
   biased: { name: 'Необъективная оценка', badge: 'badge-biased' },
   generalization: { name: 'Обобщение', badge: 'badge-generalization' },
-  modal: {name: 'Модальный глагол', badge: 'badge-modal'},
-  time: {name: 'Паразит времени', badge: 'badge-time'},
+  modal: { name: 'Модальный глагол', badge: 'badge-modal' },
+  time: { name: 'Паразит времени', badge: 'badge-time' },
   spelling: { name: '✏️ Орфография', badge: 'badge-spelling' },
   grammar: { name: '📐 Грамматика', badge: 'badge-grammar' },
   style: { name: '📝 Стиль', badge: 'badge-style' }
@@ -141,6 +141,22 @@ function getCatName(cat) {
 editor.addEventListener('scroll', () => {
   overlay.scrollTop = editor.scrollTop;
 });
+
+// Пробрасываем колесо мыши с оверлея в textarea
+overlay.addEventListener('wheel', (e) => {
+  if (!editorWrapper.classList.contains('highlight-active')) return;
+
+  // Если textarea вообще не скроллится — не перехватываем, страница крутится сама
+  if (editor.scrollHeight <= editor.clientHeight) return;
+
+  // Защита от «застревания» на границах: если уже уперлись — отдаём событие странице
+  const atTop = editor.scrollTop === 0 && e.deltaY < 0;
+  const atBottom = (editor.scrollTop + editor.clientHeight) >= editor.scrollHeight - 1 && e.deltaY > 0;
+  if (atTop || atBottom) return;
+
+  editor.scrollTop += e.deltaY;
+  e.preventDefault();
+}, { passive: false });
 
 // ============================================================
 // АНАЛИЗ ТЕКСТА
