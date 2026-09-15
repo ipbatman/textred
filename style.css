@@ -3,20 +3,21 @@
   --card: #ffffff;
   --accent: #2d6a4f;
   --accent-light: #d8f3dc;
-  --stop: #e63946;
+  --stop: #e76f51;
   --cliche: #e76f51;
-  --bureaucracy: #9b5de5;
+  --bureaucracy: #e76f51;
   --amplifier: #f4a261;
-  --input-word: #457b9d;
-  --stamp: #d62828;
-  --weak: #6c757d;
-  --vague: #2a9d8f;
+  --input-word: #e76f51;
+  --stamp: #e76f51;
+  --weak: #e76f51;
+  --vague: #e76f51;
   --personal: #e76f51;
   --possessive: #e76f51;
   --biased: #e76f51;
   --generalization: #e76f51;
   --modal: #e76f51;
   --time: #e76f51;
+  --indefinite: #e76f51;
   --spelling: #c1121f;
   --grammar: #bc6c25;
   --text: #2b2b2b;
@@ -146,7 +147,7 @@ body {
 
 .editor-wrapper {
   position: relative;
-  min-height: 420px;
+  min-height: 720px;
   width: 100%;
   flex: 1;
   display: flex;
