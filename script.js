@@ -4,14 +4,17 @@
 const DICT_STOP = ['вот', 'сейчас'];
 const DICT_CLICHE = [];
 const DICT_BUREAUCRACY = ['населения', 'с целью'];
-const DICT_AMPLIFIER = ['Самые', 'особенно', 'самый'];
+const DICT_AMPLIFIER = ['Самые', 'особенно', 'самый', 'точно'];
 const DICT_INPUT = [];
 const DICT_STAMP = ['То же самое', 'повестки дня', 'в политической жизни'];
-const DICT_WEAK = ['был', 'Есть', 'является'];
+const DICT_WEAK = ['был', 'Есть', 'является', 'существовало', 'существуют'];
 const DICT_VAGUE = ['многие', 'достаточно'];
-const DIST_PERSONAL = ['его', 'оно', 'ему', 'они', 'Их', 'мы'];
+const DIST_PERSONAL = ['его', 'оно', 'ему', 'они', 'Их', 'мы', 'ее', 'он'];
 const DIST_POSSESSIVE = ['своей', 'своих'];
 const DIST_BIASED = ['Реальная', 'скромные', 'Реальная', 'реальные', 'обычно', 'масштабные', 'хорошо'];
+const DIST_GENERALIZATION = ['всю'];
+const DIST_MODAL = ['может', 'смог'];
+const DIST_TIME = ['В наши дни'];
 
 // ============================================================
 // ПРАВИЛА ГРАММАТИКИ
@@ -37,6 +40,9 @@ const COMMENTS = {
   personal: 'Проверьте, можно ли удалить это местоимение без потери смысла',
   possessive: 'Проверьте, можно ли удалить это местоимение без потери смысла',
   biased: 'Лучше удалить или доказать фактами',
+  generalization: 'Лучше использовать только в сравнении с частью',
+  modal: 'Попробуйте убрать модальный, оставьте смысловой глагол',
+  time: 'Попробуйте убрать, уточните или противопоставьте прошлому или будущему',
   spelling: 'Орфографическая ошибка. Проверьте написание.',
   grammar: 'Грамматическая или пунктуационная ошибка.',
   style: 'Стилистическая или грамматическая ошибка (LanguageTool).'
@@ -54,7 +60,7 @@ const REPLACEMENTS = {
 // ============================================================
 const DICT = {
   stop: DICT_STOP, cliche: DICT_CLICHE, bureaucracy: DICT_BUREAUCRACY,
-  personal: DIST_PERSONAL, possessive: DIST_POSSESSIVE, biased: DIST_BIASED,
+  personal: DIST_PERSONAL, possessive: DIST_POSSESSIVE, biased: DIST_BIASED, generalization: DIST_GENERALIZATION,
   amplifier: DICT_AMPLIFIER, input: DICT_INPUT, stamp: DICT_STAMP,
   weak: DICT_WEAK, vague: DICT_VAGUE
 };
@@ -69,8 +75,11 @@ const CAT_INFO = {
   weak: { name: 'Слабые', badge: 'badge-weak' },
   vague: { name: 'Неопределённость', badge: 'badge-vague' },
   personal: { name: 'Личное местоимение', badge: 'badge-personal' },
-  possessive: { name: 'Притяжательное местоимение', badge: 'badge-possessive'},
-  biased: {name: 'Необъективная оценка', badge: 'badge-biased'},
+  possessive: { name: 'Притяжательное местоимение', badge: 'badge-possessive' },
+  biased: { name: 'Необъективная оценка', badge: 'badge-biased' },
+  generalization: { name: 'Обобщение', badge: 'badge-generalization' },
+  modal: {name: 'Модальный глагол', badge: 'badge-modal'},
+  time: {name: 'Паразит времени', badge: 'badge-time'},
   spelling: { name: '✏️ Орфография', badge: 'badge-spelling' },
   grammar: { name: '📐 Грамматика', badge: 'badge-grammar' },
   style: { name: '📝 Стиль', badge: 'badge-style' }
@@ -80,7 +89,7 @@ const CAT_NAMES = {
   stop: 'Стоп-слово', cliche: 'Штамп/клише', bureaucracy: 'Канцелярит',
   amplifier: 'Усилитель', input: 'Вводное слово', stamp: 'Рекламный штамп',
   weak: 'Слабая конструкция', vague: 'Неопределённость', personal: 'Личное местоимение',
-  possessive: 'Притяжательное местоимение', biased: 'Необъективная оценка',
+  possessive: 'Притяжательное местоимение', biased: 'Необъективная оценка', modal: 'Модальный глагол', time: 'Паразит времени',
   spelling: '✏️ Орфография', grammar: '📐 Грамматика', style: '📝 Стиль и грамматика'
 };
 
@@ -301,6 +310,9 @@ function runFullAnalysis() {
     findings.personal = localFindings.personal || [];
     findings.possessive = localFindings.possessive || [];
     findings.biased = localFindings.biased || [];
+    findings.generalization = localFindings.generalization || [];
+    findings.modal = localFindings.modal || [];
+    findings.time = localFindings.time || [];
   } else if (activeCheckType === 'regex') {
     const grammarErrors = analyzeGrammar(trimmed);
     const gc = {};
@@ -314,7 +326,7 @@ function runFullAnalysis() {
 
   lastFindings = findings;
   const words = trimmed.split(/\s+/).filter(w => w.length > 0).length;
-  const styleCategories = ['stop', 'cliche', 'bureaucracy', 'amplifier', 'input', 'stamp', 'weak', 'vague', 'personal', 'possessive', 'biased'];
+  const styleCategories = ['stop', 'cliche', 'bureaucracy', 'amplifier', 'input', 'stamp', 'weak', 'vague', 'personal', 'possessive', 'modal', 'biased'];
   const styleIssues = styleCategories.reduce((s, cat) =>
     s + (findings[cat] || []).reduce((ss, i) => ss + i.count, 0), 0);
   const grammarIssues = (findings.grammar || []).reduce((s, i) => s + i.count, 0)
@@ -520,7 +532,7 @@ function setActiveCheck(type) {
   const btn = document.getElementById(btnId);
   if (btn) btn.classList.add('active');
 
-  lastFindings = { stop: [], cliche: [], bureaucracy: [], amplifier: [], input: [], stamp: [], weak: [], vague: [], personal: [], possessive: [], biased: [], grammar: [], spelling: [], style: [] };
+  lastFindings = { stop: [], cliche: [], bureaucracy: [], amplifier: [], input: [], stamp: [], weak: [], vague: [], personal: [], possessive: [], biased: [], generalization: [], modal: [], time: [], grammar: [], spelling: [], style: [] };
   lastRenderedText = null;
   const text = editor.value.trim();
   if (!text) return;
@@ -596,7 +608,7 @@ function updateScore(styleScore, grammarScore) {
 }
 
 function updateBadges(findings) {
-  const cats = ['stop', 'cliche', 'bureaucracy', 'amplifier', 'input', 'stamp', 'weak', 'vague', 'personal', 'possessive', 'biased','spelling', 'grammar', 'style'];
+  const cats = ['stop', 'cliche', 'bureaucracy', 'amplifier', 'input', 'stamp', 'weak', 'vague', 'personal', 'possessive', 'biased', 'generalization', 'modal', 'time', 'spelling', 'grammar', 'style'];
   errorsBadges.innerHTML = cats.map(cat => {
     const items = findings[cat] || [];
     const total = items.reduce((s, i) => s + i.count, 0);
@@ -747,7 +759,7 @@ async function runSpellerOnly() {
 
   lastFindings = {
     stop: [], cliche: [], bureaucracy: [], amplifier: [],
-    input: [], stamp: [], weak: [], vague: [], personal: [], possessive: [], biased: [],
+    input: [], stamp: [], weak: [], vague: [], personal: [], possessive: [], biased: [], generalization: [], modal: [], time: [],
     grammar: [], spelling: result.errors, style: []
   };
   lastSpellingSuggestions = result.suggestions;
@@ -785,7 +797,7 @@ async function runLanguageToolOnly() {
 
   lastFindings = {
     stop: [], cliche: [], bureaucracy: [], amplifier: [],
-    input: [], stamp: [], weak: [], vague: [], personal: [], possessive: [], biased: [],
+    input: [], stamp: [], weak: [], vague: [], personal: [], possessive: [], biased: [], generalization: [], modal: [], time: [],
     grammar: [], spelling: [], style: result.errors
   };
   const totalStyle = result.errors.reduce((s, i) => s + i.count, 0);
