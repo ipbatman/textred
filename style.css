@@ -216,7 +216,7 @@ body {
 .editor-wrapper.highlight-active #editor {
   color: transparent;
   caret-color: var(--text);
-  pointer-events: none;
+  /* УБРАТЬ pointer-events: none! */
   z-index: 1;
 }
 
