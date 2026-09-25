@@ -177,7 +177,8 @@ const issueButton = document.getElementById('btn-issue');
 const issueDetail = document.getElementById('issue-detail');
 let issueIndex = -1;
 let requestRevision = 0;
-let clearedText = null;
+let saveTimer = null;
+let draftDirty = false;
 let composing = false;
 const spellingStatus = document.getElementById('spellingStatus');
 const tooltip = document.getElementById('tooltip');
@@ -495,7 +496,7 @@ function renderHighlight(text) {
   for (const m of filtered) {
     result += escapeHtml(text.slice(lastIdx, m.start));
     const orig = text.slice(m.start, m.end);
-    result += `<mark data-cat="${m.cat}">${escapeHtml(orig)}</mark>`;
+    result += `<mark data-cat="${m.cat}" data-start="${m.start}" data-end="${m.end}">${escapeHtml(orig)}</mark>`;
     lastIdx = m.end;
   }
   result += escapeHtml(text.slice(lastIdx));
@@ -727,6 +728,7 @@ window.addEventListener('scroll', hideEditorTooltip, true);
 // ============================================================
 function closeIssue() {
   issueDetail.hidden = true;
+  overlay.querySelectorAll('.current-issue').forEach(mark => mark.classList.remove('current-issue'));
   issueButton.setAttribute('aria-expanded', 'false');
 }
 
@@ -748,6 +750,23 @@ function showNextIssue() {
   issueButton.setAttribute('aria-expanded', 'true');
   issueButton.textContent = `${issueIndex + 1} из ${marks.length} · следующее`;
   hideEditorTooltip();
+  goToCurrentIssue();
+}
+
+function goToCurrentIssue() {
+  const marks = overlay.querySelectorAll('mark');
+  const mark = marks[issueIndex];
+  if (!mark) return;
+  const rect = mark.getClientRects()[0];
+  if (!rect) return;
+  const top = rect.top - overlay.getBoundingClientRect().top + overlay.scrollTop;
+  marks.forEach(item => item.classList.toggle('current-issue', item === mark));
+  editor.scrollIntoView({ block: 'center', behavior: 'instant' });
+  editor.focus({ preventScroll: true });
+  editor.setSelectionRange(Number(mark.dataset.start), Number(mark.dataset.end));
+  editor.scrollTop = Math.max(0, top - editor.clientHeight / 3);
+  syncOverlayGeometry();
+  hideEditorTooltip();
 }
 
 function updateStats() {
@@ -761,38 +780,34 @@ function updateStats() {
 // ============================================================
 // ДЕЙСТВИЯ
 // ============================================================
-function clearText() {
-  if (!editor.value) return;
-  clearedText = { text: editor.value, start: editor.selectionStart, end: editor.selectionEnd, scroll: editor.scrollTop };
-  editor.value = '';
-  requestRevision++;
-  clearTimeout(analysisTimer);
-  updateStats();
-  resetResults();
-  document.getElementById('btn-undo').hidden = false;
-  document.getElementById('actions-menu').open = false;
-  editor.focus({ preventScroll: true });
+function persistDraft() {
+  clearTimeout(saveTimer);
+  if (!draftDirty) return;
+  const saved = window.TextredStorage.saveDraft(editor.value);
+  const status = document.getElementById('save-status');
+  status.textContent = saved ? 'Черновик сохранён' : 'Не удалось сохранить черновик';
+  status.dataset.failed = String(!saved);
+  if (saved) draftDirty = false;
 }
 
-function undoClear() {
-  if (!clearedText) return;
-  const previous = clearedText;
-  clearedText = null;
-  editor.value = previous.text;
-  document.getElementById('btn-undo').hidden = true;
-  updateStats();
-  resetResults();
-  if (activeCheckType === 'style' || activeCheckType === 'regex') runFullAnalysis();
-  else spellingStatus.textContent = 'Нажмите сервис для проверки';
-  editor.focus({ preventScroll: true });
-  editor.setSelectionRange(previous.start, previous.end);
-  editor.scrollTop = previous.scroll;
-  syncOverlayGeometry();
+function scheduleDraftSave() {
+  draftDirty = true;
+  clearTimeout(saveTimer);
+  document.getElementById('save-status').textContent = 'Сохранение…';
+  saveTimer = setTimeout(persistDraft, 250);
+}
+
+function updateThemeButtons() {
+  const theme = document.documentElement.dataset.theme ||
+    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.getElementById('theme-light').setAttribute('aria-pressed', String(theme === 'light'));
+  document.getElementById('theme-dark').setAttribute('aria-pressed', String(theme === 'dark'));
 }
 
 function loadExample() {
   editor.value = 'На сегоднешний день данный продукт являеться очень уникальным решением. Как показывает практика , важно обеспечить качественное обслуживание.Конечно,необходимо учитывать все ситуации.';
   updateStats();
+  scheduleDraftSave();
   // Загрузка примера сама по себе не отправляет текст в сеть.
   setActiveCheck('style');
 }
@@ -817,8 +832,7 @@ function handleInput() {
   resetResults();
   blockTooltip();
   syncOverlayGeometry();
-  clearedText = null;
-  document.getElementById('btn-undo').hidden = true;
+  scheduleDraftSave();
   if (!editor.value.trim()) return;
   if (activeCheckType === 'style' || activeCheckType === 'regex') {
     spellingStatus.textContent = 'Ожидание проверки…';
@@ -859,8 +873,21 @@ async function runOnlineAnalysis(type) {
   updateIssueSummary();
 }
 
-document.getElementById('btn-clear').addEventListener('click', clearText);
-document.getElementById('btn-undo').addEventListener('click', undoClear);
+document.getElementById('theme-light').addEventListener('click', () => {
+  window.TextredStorage.saveTheme('light');
+  updateThemeButtons();
+});
+document.getElementById('theme-dark').addEventListener('click', () => {
+  window.TextredStorage.saveTheme('dark');
+  updateThemeButtons();
+});
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateThemeButtons);
+window.addEventListener('pagehide', persistDraft);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') persistDraft();
+});
+document.getElementById('go-to-issue').addEventListener('click', goToCurrentIssue);
+document.getElementById('issue-content').addEventListener('click', goToCurrentIssue);
 document.getElementById('btn-example').addEventListener('click', loadExample);
 document.getElementById('btn-style').addEventListener('click', () => setActiveCheck('style'));
 document.getElementById('btn-regex').addEventListener('click', () => setActiveCheck('regex'));
@@ -876,10 +903,15 @@ document.addEventListener('keydown', event => {
     const wasOpen = !issueDetail.hidden;
     closeIssue();
     hideEditorTooltip();
-    document.getElementById('actions-menu').open = false;
     if (wasOpen) issueButton.focus({ preventScroll: true });
   }
 });
 
+const restoredDraft = window.TextredStorage.restoreDraft();
+if (restoredDraft !== null) {
+  editor.value = restoredDraft;
+  document.getElementById('save-status').textContent = 'Черновик восстановлен';
+}
+updateThemeButtons();
 updateStats();
 setActiveCheck('style');

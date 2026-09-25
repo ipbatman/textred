@@ -69,29 +69,15 @@ h1 span {
   color:var(--muted);
   margin:0;
 }
-.actions {
-  margin-left:auto;
-  position:relative;
-}
-.actions summary {
-  padding:8px 10px;
-  border-radius:6px;
-}
-.actions-popover {
-  position:absolute;
-  right:0;
-  top:100%;
-  z-index:20;
-  background:var(--paper);
-  border:1px solid var(--border);
-  border-radius:8px;
-  padding:6px;
-  width:180px;
-}
-.actions-popover button {
-  width:100%;
-  text-align:left;
-}
+html[data-theme="light"] { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+.theme-switch { margin-left: auto; display: flex; gap: 4px; }
+.theme-switch button[aria-pressed="true"] { background: var(--soft); color: var(--accent); }
+.issue-body { flex: 1; min-width: 0; }
+#issue-content { cursor: pointer; }
+#go-to-issue { color: var(--accent); padding-left: 0; margin-top: 8px; }
+#overlay mark.current-issue { background: var(--soft); }
+#save-status[data-failed="true"] { color: var(--error); }
 .editor-toolbar {
   display:flex;
   flex-wrap:wrap;
@@ -201,7 +187,7 @@ main {
   flex:1;
   min-width:180px;
 }
-#btn-issue,#btn-undo {
+#btn-issue {
   color:var(--accent);
 }
 .privacy-note {
