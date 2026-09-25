@@ -1,79 +1,61 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ТекстРед — очистка текста от словесного мусора и ошибок</title>
-  <meta name="description"
-    content="Помогает очистить текст от словесного мусора, проверяет на орфографические и пунктуационные ошибки. Необходим для редакторов, журналистов, писателей..">
-
-  <!-- Open Graph -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ТекстРед — проверка текста</title>
+  <meta name="description" content="Лишние слова, пунктуация и орфография — в простом и быстром редакторе.">
   <meta property="og:title" content="ТекстРед — проверка текста">
-  <meta property="og:description" content="Стоп-слова, штампы, канцелярит, орфография и грамматика в одном редакторе.">
+  <meta property="og:description" content="Меньше лишнего. Больше смысла.">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ru_RU">
-
-  <!-- Favicon (emoji) -->
-  <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
-
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
-
 <body>
-
-  <div class="editor-panel">
-    <div class="editor-toolbar">
-      <button type="button" id="btn-clear">✕ Очистить</button>
-      <button type="button" id="btn-example">📝 Пример</button>
-      <div class="check-buttons">
-        <button type="button" class="check-btn active" id="btn-style">🔍 Стоп-слова</button>
-        <button type="button" class="check-btn" id="btn-regex">📐 Regex</button>
-        <button type="button" class="check-btn" id="btn-speller">✏️ Яндекс</button>
-        <button type="button" class="check-btn" id="btn-lt">📝 LanguageTool</button>
+  <div class="app">
+    <header class="app-header">
+      <h1>текстред<span aria-hidden="true"> /</span></h1>
+      <p>Меньше лишнего. Больше смысла.</p>
+      <details class="actions" id="actions-menu">
+        <summary>Действия</summary>
+        <div class="actions-popover"><button type="button" id="btn-clear">Очистить текст</button></div>
+      </details>
+    </header>
+    <nav class="editor-toolbar" aria-label="Выбрать и запустить проверку">
+      <div class="check-group">
+        <div class="check-buttons"><button type="button" class="check-btn active" id="btn-style" aria-pressed="true" aria-describedby="style-help">Стиль</button></div>
+        <p id="style-help">Лишние слова и штампы</p>
       </div>
-      <span class="stats" id="stats">0 слов · 0 знаков</span>
-      <span class="spelling-status" id="spellingStatus"></span>
-    </div>
-    <div class="editor-wrapper" id="editorWrapper">
-      <div id="overlay"></div>
-      <textarea id="editor" placeholder="Вставьте или напишите текст для проверки…" spellcheck="false"></textarea>
-    </div>
-  </div>
-
-  <div class="result-panel">
-    <div class="result-card">
-      <h3>📊 Оценка</h3>
-      <div class="score-row">
-        <div class="score-item">
-          <div class="score-label">📝 Стиль</div>
-          <div class="score-value" id="styleScore">—</div>
-          <div class="progress-bar">
-            <div class="fill" id="styleProgressFill" style="width:0%"></div>
-          </div>
-        </div>
-        <div class="score-item">
-          <div class="score-label">📐 Грамматика</div>
-          <div class="score-value" id="grammarScore">—</div>
-          <div class="progress-bar">
-            <div class="fill" id="grammarProgressFill" style="width:0%"></div>
-          </div>
-        </div>
+      <div class="check-group">
+        <div class="check-buttons"><button type="button" class="check-btn" id="btn-regex" aria-pressed="false" aria-describedby="rules-help">Правила</button></div>
+        <p id="rules-help">Пробелы и пунктуация</p>
       </div>
-      <p class="score-comment" id="scoreComment">Введите текст для анализа</p>
-    </div>
+      <div class="check-group">
+        <div class="check-buttons"><button type="button" class="check-btn" id="btn-speller" aria-pressed="false" aria-describedby="online-help">Яндекс</button><button type="button" class="check-btn" id="btn-lt" aria-pressed="false" aria-describedby="online-help">LanguageTool</button></div>
+        <p id="online-help">Орфография и грамматика · онлайн</p>
+      </div>
+    </nav>
+    <main>
+      <div class="document-heading"><label for="editor">Ваш текст</label><button type="button" id="btn-example">Попробовать пример</button></div>
+      <div class="editor-wrapper" id="editorWrapper">
+        <div id="overlay" aria-hidden="true"></div>
+        <textarea id="editor" placeholder="Вставьте или напишите текст…" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="privacy-note"></textarea>
+      </div>
+      <section class="issue-detail" id="issue-detail" aria-label="Пояснение к замечанию" hidden>
+        <div id="issue-content" aria-live="polite"></div>
+        <button type="button" id="close-issue" aria-label="Закрыть пояснение">×</button>
+      </section>
+    </main>
+    <footer class="editor-footer">
+      <span id="stats">0 слов · 0 знаков</span>
+      <span id="spellingStatus" role="status">Введите текст для проверки</span>
+      <button type="button" id="btn-undo" hidden>Вернуть текст</button>
+      <button type="button" id="btn-issue" aria-controls="issue-detail" aria-expanded="false" hidden></button>
+    </footer>
   </div>
-
-  <!-- Tooltip -->
-  <div class="custom-tooltip" id="tooltip">
-    <div class="custom-tooltip-arrow"></div>
-    <div class="custom-tooltip-content"></div>
-  </div>
-
-  <script src="script.js"></script>
-
-  <p style="text-align: center;">v0.0.9</p>
+  <p class="privacy-note" id="privacy-note">Стиль и правила работают на устройстве. Кнопки «Яндекс» и LanguageTool отправляют текст выбранному сервису.</p>
+  <div class="custom-tooltip" id="tooltip" role="tooltip"><div class="custom-tooltip-content"></div></div>
 </body>
-
 </html>

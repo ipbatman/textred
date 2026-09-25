@@ -173,7 +173,12 @@ const editor = document.getElementById('editor');
 const overlay = document.getElementById('overlay');
 const editorWrapper = document.getElementById('editorWrapper');
 const stats = document.getElementById('stats');
-const scoreComment = document.getElementById('scoreComment');
+const issueButton = document.getElementById('btn-issue');
+const issueDetail = document.getElementById('issue-detail');
+let issueIndex = -1;
+let requestRevision = 0;
+let clearedText = null;
+let composing = false;
 const spellingStatus = document.getElementById('spellingStatus');
 const tooltip = document.getElementById('tooltip');
 
@@ -416,7 +421,7 @@ function runFullAnalysis() {
     findings.modal = localFindings.modal || [];
     findings.time = localFindings.time || [];
   } else if (activeCheckType === 'regex') {
-    const grammarErrors = analyzeGrammar(trimmed);
+    const grammarErrors = analyzeGrammar(text);
     const gc = {};
     for (const err of grammarErrors) {
       if (!gc[err.message]) gc[err.message] = { word: err.message, count: 0, _details: [] };
@@ -427,26 +432,12 @@ function runFullAnalysis() {
   }
 
   lastFindings = findings;
-  const words = trimmed.split(/\s+/).filter(w => w.length > 0).length;
-  const styleCategories = ['stop', 'cliche', 'bureaucracy', 'amplifier', 'input', 'stamp', 'weak', 'vague', 'personal', 'possessive', 'modal', 'biased'];
-  const styleIssues = styleCategories.reduce((s, cat) =>
-    s + (findings[cat] || []).reduce((ss, i) => ss + i.count, 0), 0);
-  const grammarIssues = (findings.grammar || []).reduce((s, i) => s + i.count, 0)
-    + (findings.spelling || []).reduce((s, i) => s + i.count, 0)
-    + (findings.style || []).reduce((s, i) => s + i.count, 0);
-
-  const stylePercent = words > 0 ? (styleIssues / words) * 100 : 0;
-  const grammarPercent = words > 0 ? (grammarIssues / words) * 100 : 0;
-  const styleScore = Math.max(0, Math.min(10, 10 - stylePercent * 0.5));
-  const grammarScore = Math.max(0, Math.min(10, 10 - grammarPercent * 0.5));
-
-  updateScore(styleScore, grammarScore);
-
   if (text !== lastRenderedText) {
     renderHighlight(text);
     lastRenderedText = text;
   }
   editorWrapper.classList.add('highlight-active');
+  updateIssueSummary();
 }
 
 // ============================================================
@@ -517,8 +508,7 @@ function renderHighlight(text) {
 // ============================================================
 // TOOLTIP
 // ============================================================
-function showTooltip(mark, e) {
-  if (tooltipBlocked) return;
+function explanationHTML(mark) {
   const cat = mark.dataset.cat;
   const word = mark.textContent;
   const comment = COMMENTS[cat] || '';
@@ -584,7 +574,12 @@ function showTooltip(mark, e) {
     }
   }
 
-  tooltip.querySelector('.custom-tooltip-content').innerHTML = html;
+  return html;
+}
+
+function showTooltip(mark) {
+  if (tooltipBlocked) return;
+  tooltip.querySelector('.custom-tooltip-content').innerHTML = explanationHTML(mark);
   positionTooltipAtMark(mark);
   tooltip.classList.add('visible');
 }
@@ -635,37 +630,20 @@ function blockTooltip() {
 }
 
 function setActiveCheck(type) {
-  if (activeCheckType === type) return;
+  clearTimeout(analysisTimer);
+  requestRevision++;
   activeCheckType = type;
-  document.querySelectorAll('.check-btn').forEach(btn => btn.classList.remove('active'));
   const btnId = { style: 'btn-style', regex: 'btn-regex', speller: 'btn-speller', languageTool: 'btn-lt' }[type];
-  const btn = document.getElementById(btnId);
-  if (btn) btn.classList.add('active');
-
-  lastFindings = { stop: [], cliche: [], bureaucracy: [], amplifier: [], input: [], stamp: [], weak: [], vague: [], personal: [], possessive: [], biased: [], generalization: [], modal: [], time: [], grammar: [], spelling: [], style: [] };
-  lastRenderedText = null;
-  const text = editor.value.trim();
-  if (!text) return;
-
+  document.querySelectorAll('.check-btn').forEach(btn => {
+    const active = btn.id === btnId;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+  resetResults();
+  if (!editor.value.trim()) return;
   if (type === 'style' || type === 'regex') runFullAnalysis();
-  else if (type === 'speller') runSpellerOnly();
-  else if (type === 'languageTool') runLanguageToolOnly();
+  else runOnlineAnalysis(type);
 }
-
-function switchToEditMode() {
-  editorWrapper.classList.remove('highlight-active');
-  tooltip.classList.remove('visible');
-  blockTooltip();
-  requestAnimationFrame(() => { editor.focus(); });
-}
-
-// ============================================================
-// ОБРАБОТЧИКИ СОБЫТИЙ
-// ============================================================
-editorWrapper.addEventListener('mousedown', (e) => {
-  const mark = e.target.closest('mark');
-  if (mark) showTooltip(mark, e);
-});
 
 let hoverTimer = null;
 let hoveredMark = null;
@@ -747,29 +725,29 @@ window.addEventListener('scroll', hideEditorTooltip, true);
 // ============================================================
 // ОБНОВЛЕНИЕ UI
 // ============================================================
-function updateScore(styleScore, grammarScore) {
-  const styleEl = document.getElementById('styleScore');
-  const styleFill = document.getElementById('styleProgressFill');
-  const styleRounded = Math.round(styleScore * 10) / 10;
-  styleEl.textContent = styleRounded.toFixed(1);
-  styleFill.style.width = `${styleScore * 10}%`;
-  if (styleScore >= 7.5) { styleEl.className = 'score-value good'; styleFill.style.background = '#2d6a4f'; }
-  else if (styleScore >= 5) { styleEl.className = 'score-value mid'; styleFill.style.background = '#d97706'; }
-  else { styleEl.className = 'score-value bad'; styleFill.style.background = '#e63946'; }
+function closeIssue() {
+  issueDetail.hidden = true;
+  issueButton.setAttribute('aria-expanded', 'false');
+}
 
-  const grammarEl = document.getElementById('grammarScore');
-  const grammarFill = document.getElementById('grammarProgressFill');
-  const grammarRounded = Math.round(grammarScore * 10) / 10;
-  grammarEl.textContent = grammarRounded.toFixed(1);
-  grammarFill.style.width = `${grammarScore * 10}%`;
-  if (grammarScore >= 7.5) { grammarEl.className = 'score-value good'; grammarFill.style.background = '#2d6a4f'; }
-  else if (grammarScore >= 5) { grammarEl.className = 'score-value mid'; grammarFill.style.background = '#d97706'; }
-  else { grammarEl.className = 'score-value bad'; grammarFill.style.background = '#e63946'; }
+function updateIssueSummary() {
+  const count = overlay.querySelectorAll('mark').length;
+  issueIndex = -1;
+  closeIssue();
+  issueButton.hidden = count === 0;
+  issueButton.textContent = `Замечания: ${count} · посмотреть`;
+  spellingStatus.textContent = count ? 'Проверено' : 'Замечаний не найдено';
+}
 
-  const avgScore = (styleScore + grammarScore) / 2;
-  if (avgScore >= 7.5) scoreComment.textContent = '✨ Отличный текст!';
-  else if (avgScore >= 5) scoreComment.textContent = '⚠️ Текст требует доработки';
-  else scoreComment.textContent = '❌ Много словесного мусора';
+function showNextIssue() {
+  const marks = overlay.querySelectorAll('mark');
+  if (!marks.length) return;
+  issueIndex = (issueIndex + 1) % marks.length;
+  document.getElementById('issue-content').innerHTML = explanationHTML(marks[issueIndex]);
+  issueDetail.hidden = false;
+  issueButton.setAttribute('aria-expanded', 'true');
+  issueButton.textContent = `${issueIndex + 1} из ${marks.length} · следующее`;
+  hideEditorTooltip();
 }
 
 function updateStats() {
@@ -777,158 +755,131 @@ function updateStats() {
   const trimmed = text.trim();
   const words = trimmed ? trimmed.split(/\s+/).filter(w => w.length > 0).length : 0;
   stats.textContent = `${words} слов · ${text.length} знаков`;
+  document.getElementById('btn-example').hidden = text.length > 0;
 }
 
 // ============================================================
 // ДЕЙСТВИЯ
 // ============================================================
 function clearText() {
+  if (!editor.value) return;
+  clearedText = { text: editor.value, start: editor.selectionStart, end: editor.selectionEnd, scroll: editor.scrollTop };
   editor.value = '';
-  overlay.innerHTML = '';
-  lastSpellingSuggestions = {};
-  lastFindings = {};
-  lastRenderedText = null;
-  editorWrapper.classList.remove('highlight-active');
-  tooltip.classList.remove('visible');
+  requestRevision++;
+  clearTimeout(analysisTimer);
   updateStats();
   resetResults();
+  document.getElementById('btn-undo').hidden = false;
+  document.getElementById('actions-menu').open = false;
+  editor.focus({ preventScroll: true });
+}
+
+function undoClear() {
+  if (!clearedText) return;
+  const previous = clearedText;
+  clearedText = null;
+  editor.value = previous.text;
+  document.getElementById('btn-undo').hidden = true;
+  updateStats();
+  resetResults();
+  if (activeCheckType === 'style' || activeCheckType === 'regex') runFullAnalysis();
+  else spellingStatus.textContent = 'Нажмите сервис для проверки';
+  editor.focus({ preventScroll: true });
+  editor.setSelectionRange(previous.start, previous.end);
+  editor.scrollTop = previous.scroll;
+  syncOverlayGeometry();
 }
 
 function loadExample() {
-  editor.value = `На сегоднешний день данный продукт являеться очень уникальным и инновационным решением в рамках современного мира . Как показывает практика , очень важно обеспечить качественное обслуживание.Конечно,необходимо учитывать все ситуации и вопросы,которые могут возникнуть.`;
-  lastRenderedText = null;
+  editor.value = 'На сегоднешний день данный продукт являеться очень уникальным решением. Как показывает практика , важно обеспечить качественное обслуживание.Конечно,необходимо учитывать все ситуации.';
   updateStats();
-  runFullAnalysis();
+  // Загрузка примера сама по себе не отправляет текст в сеть.
+  setActiveCheck('style');
 }
 
 function resetResults() {
-  document.getElementById('styleScore').textContent = '—';
-  document.getElementById('styleScore').className = 'score-value';
-  document.getElementById('styleProgressFill').style.width = '0%';
-  document.getElementById('grammarScore').textContent = '—';
-  document.getElementById('grammarScore').className = 'score-value';
-  document.getElementById('grammarProgressFill').style.width = '0%';
-  scoreComment.textContent = 'Введите текст для анализа';
-  spellingStatus.textContent = '';
+  hideEditorTooltip();
+  closeIssue();
+  issueButton.hidden = true;
+  issueIndex = -1;
+  spellingStatus.textContent = 'Введите текст для проверки';
+  lastSpellingSuggestions = {};
   lastFindings = {};
   lastRenderedText = null;
   overlay.innerHTML = '';
   editorWrapper.classList.remove('highlight-active');
 }
 
-// ============================================================
-// ОБРАБОТКА ВВОДА
-// ============================================================
-editor.addEventListener('input', () => {
-  updateStats();
-  editorWrapper.classList.remove('highlight-active');
+function handleInput() {
+  requestRevision++;
   clearTimeout(analysisTimer);
-  hideEditorTooltip();
+  updateStats();
+  resetResults();
   blockTooltip();
   syncOverlayGeometry();
+  clearedText = null;
+  document.getElementById('btn-undo').hidden = true;
+  if (!editor.value.trim()) return;
   if (activeCheckType === 'style' || activeCheckType === 'regex') {
-    analysisTimer = setTimeout(runFullAnalysis, 500);
+    spellingStatus.textContent = 'Ожидание проверки…';
+    if (!composing) analysisTimer = setTimeout(runFullAnalysis, 400);
+  } else {
+    spellingStatus.textContent = 'Текст изменён · нажмите сервис для проверки';
   }
-});
-
-editor.addEventListener('blur', () => {
-  const text = editor.value.trim();
-  if (!text) return;
-  if (activeCheckType === 'style' || activeCheckType === 'regex') runFullAnalysis();
-  else if (activeCheckType === 'speller') runSpellerOnly();
-  else if (activeCheckType === 'languageTool') runLanguageToolOnly();
-});
-
-async function runSpellerOnly() {
-  const text = editor.value.trim();
-  if (!text) {
-    spellingStatus.textContent = '';
-    lastFindings.spelling = [];
-    renderHighlight(editor.value);
-    lastRenderedText = editor.value;
-    return;
-  }
-  spellingStatus.textContent = '✏️ Проверяем орфографию...';
-  const result = await checkSpelling(text);
-  if (result.failed) { spellingStatus.textContent = '⚠️ Яндекс недоступен'; return; }
-
-  lastFindings = {
-    stop: [], cliche: [], bureaucracy: [], amplifier: [],
-    input: [], stamp: [], weak: [], vague: [], personal: [], possessive: [], biased: [], generalization: [], modal: [], time: [], grammar: [], spelling: result.errors, style: []
-  };
-  lastSpellingSuggestions = result.suggestions;
-  const totalSpelling = result.errors.reduce((s, i) => s + i.count, 0);
-  spellingStatus.textContent = `✓ Орфография: ${totalSpelling} ошибок`;
-
-  const trimmed = editor.value.trim();
-  const words = trimmed.split(/\s+/).filter(w => w.length > 0).length;
-  const grammarPercent = words > 0 ? (totalSpelling / words) * 100 : 0;
-  const grammarScore = Math.max(0, Math.min(10, 10 - grammarPercent * 0.5));
-  updateScore(10, grammarScore);
-  renderHighlight(editor.value);
-  lastRenderedText = editor.value;
-  editorWrapper.classList.add('highlight-active');
-
-  setTimeout(() => {
-    if (spellingStatus.textContent.startsWith('✓')) spellingStatus.textContent = '';
-  }, 3000);
 }
 
-async function runLanguageToolOnly() {
-  const text = editor.value.trim();
-  if (!text) {
-    spellingStatus.textContent = '';
-    lastFindings.style = [];
-    renderHighlight(editor.value);
-    lastRenderedText = editor.value;
+editor.addEventListener('input', handleInput);
+editor.addEventListener('compositionstart', () => {
+  composing = true;
+  clearTimeout(analysisTimer);
+});
+editor.addEventListener('compositionend', () => {
+  composing = false;
+  handleInput();
+});
+
+async function runOnlineAnalysis(type) {
+  const text = editor.value;
+  if (!text.trim()) return;
+  const revision = ++requestRevision;
+  const service = type === 'speller' ? 'Яндекс' : 'LanguageTool';
+  spellingStatus.textContent = `${service}: проверяем…`;
+  const result = await (type === 'speller' ? checkSpelling(text) : checkLanguageTool(text));
+  // Не применяем ответы для старого текста, режима или предыдущего запроса.
+  if (revision !== requestRevision || editor.value !== text || activeCheckType !== type) return;
+  if (result.failed) {
+    spellingStatus.textContent = `${service} недоступен · нажмите ещё раз`;
     return;
   }
-  spellingStatus.textContent = '📝 Проверяем грамматику...';
-  const result = await checkLanguageTool(text);
-  if (result.failed) { spellingStatus.textContent = '⚠️ LanguageTool недоступен'; return; }
-
-  lastFindings = {
-    stop: [], cliche: [], bureaucracy: [], amplifier: [],
-    input: [], stamp: [], weak: [], vague: [], personal: [], possessive: [], biased: [], generalization: [], modal: [], time: [],
-    grammar: [], spelling: [], style: result.errors
-  };
-  const totalStyle = result.errors.reduce((s, i) => s + i.count, 0);
-  spellingStatus.textContent = `✓ Грамматика: ${totalStyle} замечаний`;
-
-  const trimmed = editor.value.trim();
-  const words = trimmed.split(/\s+/).filter(w => w.length > 0).length;
-  const grammarPercent = words > 0 ? (totalStyle / words) * 100 : 0;
-  const grammarScore = Math.max(0, Math.min(10, 10 - grammarPercent * 0.5));
-  updateScore(10, grammarScore);
-  renderHighlight(editor.value);
-  lastRenderedText = editor.value;
+  lastFindings = type === 'speller' ? { spelling: result.errors } : { style: result.errors };
+  lastSpellingSuggestions = result.suggestions || {};
+  renderHighlight(text);
+  lastRenderedText = text;
   editorWrapper.classList.add('highlight-active');
-
-  setTimeout(() => {
-    if (spellingStatus.textContent.startsWith('✓')) spellingStatus.textContent = '';
-  }, 3000);
+  updateIssueSummary();
 }
 
-// ============================================================
-// ПРИВЯЗКА КНОПОК (единообразно через addEventListener)
-// ============================================================
 document.getElementById('btn-clear').addEventListener('click', clearText);
+document.getElementById('btn-undo').addEventListener('click', undoClear);
 document.getElementById('btn-example').addEventListener('click', loadExample);
 document.getElementById('btn-style').addEventListener('click', () => setActiveCheck('style'));
 document.getElementById('btn-regex').addEventListener('click', () => setActiveCheck('regex'));
 document.getElementById('btn-speller').addEventListener('click', () => setActiveCheck('speller'));
 document.getElementById('btn-lt').addEventListener('click', () => setActiveCheck('languageTool'));
+issueButton.addEventListener('click', showNextIssue);
+document.getElementById('close-issue').addEventListener('click', () => {
+  closeIssue();
+  issueButton.focus({ preventScroll: true });
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    const wasOpen = !issueDetail.hidden;
+    closeIssue();
+    hideEditorTooltip();
+    document.getElementById('actions-menu').open = false;
+    if (wasOpen) issueButton.focus({ preventScroll: true });
+  }
+});
 
-// Мобильная обработка
-if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-  document.querySelectorAll('.editor-toolbar button').forEach(btn => {
-    btn.addEventListener('touchend', function (e) {
-      e.preventDefault();
-      btn.click();
-    }, { passive: false });
-  });
-}
-
-// Инициализация
 updateStats();
 setActiveCheck('style');
