@@ -174,7 +174,7 @@ body {
   bottom: 0;
   width: 100%;
   height: 100%;
-  color: var(--text);
+  color: transparent;
   overflow: hidden;
   pointer-events: none;
   z-index: 1;
@@ -209,15 +209,14 @@ body {
 
 .editor-wrapper.highlight-active #overlay {
   visibility: visible;
-  pointer-events: auto;
-  z-index: 10;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .editor-wrapper.highlight-active #editor {
-  color: transparent;
+  color: var(--text);
   caret-color: var(--text);
-  /* УБРАТЬ pointer-events: none! */
-  z-index: 1;
+  z-index: 2;
 }
 
 #editor::placeholder {
@@ -757,19 +756,7 @@ body {
 }
 
 /* На мобильных — оверлей видим, но умно реагирует на тапы */
-@media (max-width: 860px),
-(hover: none) {
-  .editor-wrapper.highlight-active #editor {
-    color: transparent !important;
-    caret-color: var(--text);
-  }
-
-  .editor-wrapper.highlight-active #overlay {
-    visibility: visible !important;
-    pointer-events: auto !important;
-  }
-
-  /* Подсказка на мобильных — крупнее и удобнее */
+@media (max-width: 860px), (hover: none) {
   .custom-tooltip {
     max-width: 90vw;
   }

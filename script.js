@@ -5,14 +5,14 @@ const DICT_STOP = ['вот', 'сейчас', 'он', 'со', 'все', 'она',
 ];
 const DICT_CLICHE = ['в настоящее время', 'на сегодняшний день', 'на данный момент', 'следует отметить', 'стоит отметить', 'как уже было сказано', 'в связи с этим', 'на самом деле', 'безусловно', 'без сомнения', 'в общем и целом', 'по большому счету', 'так или иначе', 'тем не менее', 'в первую очередь', 'как таковой', 'имеет место', 'в рамках', 'в целях', 'в сфере', 'является', 'осуществляет', 'производит'];
 const DICT_BUREAUCRACY = ['населения', 'с целью',
-// Устойчивые предлоги и связки
+  // Устойчивые предлоги и связки
   'в целях', 'в рамках', 'в части', 'на предмет', 'в отношении', 'по линии', 'в соответствии с',
-  'на основании', 'посредством', 
+  'на основании', 'посредством',
   // Типичные бюрократические обстоятельства
-  'в установленном порядке', 'в обязательном порядке', 'на безвозмездной основе', 
+  'в установленном порядке', 'в обязательном порядке', 'на безвозмездной основе',
   'по мере необходимости', 'в рабочем порядке',
   // Глаголы-«пустышки» и связки (превращают действие в состояние)
-  'осуществлять', 'производить', 'оказывать', 'обеспечивать', 'является', 
+  'осуществлять', 'производить', 'оказывать', 'обеспечивать', 'является',
   'представляет собой', 'имеет место', 'имеет место быть' // классическая канцелярская ошибка
 ];
 const DICT_AMPLIFIER = ['Самые', 'особенно', 'самый', 'точно', 'фактическая', 'очень',
@@ -29,9 +29,9 @@ const DICT_STAMP = ['То же самое', 'повестки дня', 'в по�
   'гарантированный результат', 'эксклюзивные условия', 'революционный прорыв', 'самые низкие цены', 'проверенный временем', 'абсолютная безопасность', '100% результат', 'мировой уровень',
   'первоклассный сервис', 'высококвалифицированные специалисты', 'ведущей', 'преддверии'
 ];
-const DICT_WEAK = ['был', 'Есть', 'является', 'существовало', 'существуют', 'являются', 'являться', 'осуществляет', 'осуществляют', 'осуществлять', 'производит', 'производят', 'производить', 'процесс', 'осуществление', 'производство', 'возможность', 'наличии', 'отсутствии', 'случае', 'связи', 'причине', 'факт', 'уровне', 'целях', 'рамках', 'порядке', 'основе', 'обладает'
+const DICT_WEAK = ['был', 'Есть', 'является', 'существовало', 'существуют', 'являются', 'являться', 'осуществляет', 'осуществляют', 'осуществлять', 'производит', 'производят', 'производить', 'процесс', 'осуществление', 'производство', 'возможность', 'наличии', 'отсутствии', 'случае', 'причине', 'факт', 'уровне', 'целях', 'рамках', 'порядке', 'основе', 'обладает'
 ];
-const DICT_VAGUE = ['многие', 'достаточно', 'вроде', 'вроде бы', 'кажется', 'наверное', 'возможно', 'может быть', 'примерно', 'приблизительно', 'где-то', 'около',  'какой-то', 'некий', 'некоторые', 'определенный', 'чуть ли не', 'вряд ли', 'по всей видимости', 'скорее всего', 'в каком-то смысле', 'условно', 'предположительно', 'как бы', 'чего-либо'
+const DICT_VAGUE = ['многие', 'достаточно', 'вроде', 'вроде бы', 'кажется', 'наверное', 'возможно', 'может быть', 'примерно', 'приблизительно', 'где-то', 'около', 'какой-то', 'некий', 'некоторые', 'определенный', 'чуть ли не', 'вряд ли', 'по всей видимости', 'скорее всего', 'в каком-то смысле', 'условно', 'предположительно', 'как бы', 'чего-либо'
 ];
 const DIST_PERSONAL = ['его', 'ему', 'они', 'Их', 'мы', 'ее', 'он',
   'я', 'меня', 'мне', 'мной', 'ты', 'тебя', 'тебе', 'тобой', 'его', 'она', 'её', 'ней', 'оно', 'нему', 'нас', 'нам', 'нами', 'вы', 'вас', 'вам', 'вами', 'ним', 'ними', 'ими'
@@ -39,18 +39,18 @@ const DIST_PERSONAL = ['его', 'ему', 'они', 'Их', 'мы', 'ее', 'о
 const DIST_POSSESSIVE = ['своей', 'своих', 'мой', 'моего', 'моему', 'моим', 'моем', 'моя', 'моей', 'мою', 'моё', 'мои', 'моих', 'моими', 'твой', 'твоего', 'твоему', 'твоим', 'твоем', 'твоя', 'твоей', 'твою', 'твоё', 'твои', 'твоих', 'твоими', 'наш', 'нашего', 'нашему', 'нашим', 'нашем', 'наша', 'нашей', 'нашу', 'наши', 'наших', 'нашими', 'ваш', 'вашего', 'вашему', 'вашим', 'вашем', 'ваша', 'вашей', 'вашу', 'ваши', 'ваших', 'вашими', 'его', 'её', 'их', 'свой', 'своего', 'своему', 'своим', 'своем', 'своя', 'свою', 'своё', 'свои', 'своими'
 ];
 const DIST_BIASED = ['Реальная', 'скромные', 'реальные', 'обычно', 'масштабные', 'хорошо', 'значительное', 'реальных', 'полномасштабного', 'современных', 'революционная', 'мощной', 'огромны', 'важный',
-// Базовые оценочные прилагательные
+  // Базовые оценочные прилагательные
   'хороший', 'плохой', 'прекрасный', 'ужасный', 'отвратительный', 'великолепный', 'скучный', 'интересный', 'странный', 'нелепый', 'абсурдный', 'глупый', 'замечательный', 'чудесный', 'безобразный', 'идеальный', 'совершенный', 'посредственный',
   // Вводные конструкции, указывающие на личное мнение
   'на мой взгляд', 'по моему мнению', 'я считаю', 'мне кажется', 'как мне кажется', 'по-моему', 'на мой скромный взгляд',
-    // Эмоциональные наречия и фразы
+  // Эмоциональные наречия и фразы
   'к сожалению', 'к счастью', 'увы', 'слава богу', 'честно говоря', 'без преувеличения', 'справедливости ради',
   'к чести', 'к стыду'
 ];
 const DIST_GENERALIZATION = ['всю', 'все', 'всегда', 'никогда', 'никто', 'каждый', 'любой', 'абсолютно все', 'везде', 'всюду', 'нигде', 'полностью', 'целиком', 'единственный', 'без исключений', 'сплошь и рядом', 'всем известно', 'стопроцентно', 'повсеместно', 'тотально', 'вечно', 'постоянно', 'безусловно все', 'более'
 ];
 const DIST_MODAL = ['может', 'смог',
-// Долженствование и обязанность
+  // Долженствование и обязанность
   'должен', 'должна', 'должно', 'должны', 'обязан', 'обязана', 'обязано', 'обязаны', 'надлежит', 'следует',
   // Необходимость
   'нужно', 'надо', 'необходимо', 'требуется', 'придется', 'придётся',
@@ -160,7 +160,6 @@ const CAT_NAMES = {
 // ============================================================
 let lastFindings = {};
 let lastSpellingSuggestions = {};
-let activeDropdownCat = null;
 let analysisTimer = null;
 let lastRenderedText = null;
 let tooltipBlocked = false;
@@ -176,9 +175,6 @@ const editorWrapper = document.getElementById('editorWrapper');
 const stats = document.getElementById('stats');
 const scoreComment = document.getElementById('scoreComment');
 const spellingStatus = document.getElementById('spellingStatus');
-const errorsBadges = document.getElementById('errorsBadges');
-const errorDropdown = document.getElementById('errorDropdown');
-const errorDropdownList = document.getElementById('errorDropdownList');
 const tooltip = document.getElementById('tooltip');
 
 // ============================================================
@@ -200,25 +196,30 @@ function getCatName(cat) {
 // ============================================================
 // СИНХРОНИЗАЦИЯ СКРОЛЛА
 // ============================================================
-editor.addEventListener('scroll', () => {
+function syncOverlayGeometry() {
+  overlay.style.right = 'auto';
+  overlay.style.bottom = 'auto';
+
+  // Учитываем место, которое занимает полоса прокрутки textarea.
+  overlay.style.width = `${editor.clientWidth}px`;
+  overlay.style.height = `${editor.clientHeight}px`;
+
   overlay.scrollTop = editor.scrollTop;
+  overlay.scrollLeft = editor.scrollLeft;
+}
+
+editor.addEventListener('scroll', () => {
+  syncOverlayGeometry();
+  hideEditorTooltip();
 });
 
-// Пробрасываем колесо мыши с оверлея в textarea
-overlay.addEventListener('wheel', (e) => {
-  if (!editorWrapper.classList.contains('highlight-active')) return;
+const editorResizeObserver = new ResizeObserver(() => {
+  syncOverlayGeometry();
+  hideEditorTooltip();
+});
 
-  // Если textarea вообще не скроллится — не перехватываем, страница крутится сама
-  if (editor.scrollHeight <= editor.clientHeight) return;
-
-  // Защита от «застревания» на границах: если уже уперлись — отдаём событие странице
-  const atTop = editor.scrollTop === 0 && e.deltaY < 0;
-  const atBottom = (editor.scrollTop + editor.clientHeight) >= editor.scrollHeight - 1 && e.deltaY > 0;
-  if (atTop || atBottom) return;
-
-  editor.scrollTop += e.deltaY;
-  e.preventDefault();
-}, { passive: false });
+editorResizeObserver.observe(editor);
+syncOverlayGeometry();
 
 // ============================================================
 // АНАЛИЗ ТЕКСТА
@@ -440,7 +441,6 @@ function runFullAnalysis() {
   const grammarScore = Math.max(0, Math.min(10, 10 - grammarPercent * 0.5));
 
   updateScore(styleScore, grammarScore);
-  updateBadges(findings);
 
   if (text !== lastRenderedText) {
     renderHighlight(text);
@@ -453,7 +453,13 @@ function runFullAnalysis() {
 // ПОДСВЕТКА
 // ============================================================
 function renderHighlight(text) {
-  if (!text || !text.trim()) { overlay.innerHTML = ''; return; }
+  hideEditorTooltip();
+
+  if (!text || !text.trim()) {
+    overlay.innerHTML = '';
+    syncOverlayGeometry();
+    return;
+  }
   const textLower = text.toLowerCase();
   const marks = [];
 
@@ -502,7 +508,10 @@ function renderHighlight(text) {
     lastIdx = m.end;
   }
   result += escapeHtml(text.slice(lastIdx));
-  overlay.innerHTML = result;
+
+  // Сохраняем высоту последней пустой строки.
+  overlay.innerHTML = result + (text.endsWith('\n') ? '\n' : '');
+  syncOverlayGeometry();
 }
 
 // ============================================================
@@ -653,38 +662,87 @@ function switchToEditMode() {
 // ============================================================
 // ОБРАБОТЧИКИ СОБЫТИЙ
 // ============================================================
-overlay.addEventListener('mouseover', (e) => {
+editorWrapper.addEventListener('mousedown', (e) => {
   const mark = e.target.closest('mark');
   if (mark) showTooltip(mark, e);
 });
 
-overlay.addEventListener('mouseout', (e) => {
-  const mark = e.target.closest('mark');
-  if (mark) {
-    const related = e.relatedTarget;
-    if (!related || !mark.contains(related)) tooltip.classList.remove('visible');
-  }
-});
+let hoverTimer = null;
+let hoveredMark = null;
 
-overlay.addEventListener('mousemove', (e) => {
-  const mark = e.target.closest('mark');
-  if (mark) positionTooltipAtMark(mark);
-});
-
-editorWrapper.addEventListener('mousedown', (e) => {
-  blockTooltip();
+function hideEditorTooltip() {
+  clearTimeout(hoverTimer);
+  hoverTimer = null;
+  hoveredMark = null;
   tooltip.classList.remove('visible');
+}
 
-  // Если клик НЕ по подсвеченному слову (mark), то переключаемся в режим редактирования
-  const mark = e.target.closest('mark');
-  if (editorWrapper.classList.contains('highlight-active') && !mark) {
-    // Не вызываем preventDefault — позволяем браузеру установить курсор!
-    // Но всё равно убираем подсветку и показываем textarea
-    editorWrapper.classList.remove('highlight-active');
-    // Фокус будет установлен автоматически браузером при клике в textarea
-    // (так как pointer-events у textarea снова активны)
+function findMarkAtPoint(x, y) {
+  for (const mark of overlay.querySelectorAll('mark')) {
+    // У слова или фразы может быть несколько строк.
+    for (const rect of mark.getClientRects()) {
+      if (
+        x >= rect.left &&
+        x <= rect.right &&
+        y >= rect.top &&
+        y <= rect.bottom
+      ) {
+        return mark;
+      }
+    }
   }
+
+  return null;
+}
+
+editor.addEventListener('pointermove', (event) => {
+  if (
+    event.pointerType !== 'mouse' ||
+    event.buttons !== 0 ||
+    tooltipBlocked ||
+    !editorWrapper.classList.contains('highlight-active')
+  ) {
+    hideEditorTooltip();
+    return;
+  }
+
+  const mark = findMarkAtPoint(event.clientX, event.clientY);
+
+  if (mark === hoveredMark) return;
+
+  hideEditorTooltip();
+  hoveredMark = mark;
+
+  if (!mark) return;
+
+  hoverTimer = setTimeout(() => {
+    if (
+      hoveredMark === mark &&
+      mark.isConnected &&
+      !tooltipBlocked
+    ) {
+      showTooltip(mark);
+    }
+  }, 350);
 });
+
+editor.addEventListener('pointerdown', () => {
+  hideEditorTooltip();
+  blockTooltip();
+
+  // Не вызываем preventDefault():
+  // браузер сам устанавливает курсор и начинает выделение.
+});
+
+editor.addEventListener('pointerleave', hideEditorTooltip);
+
+editor.addEventListener('keydown', () => {
+  hideEditorTooltip();
+  blockTooltip();
+});
+
+window.addEventListener('resize', hideEditorTooltip);
+window.addEventListener('scroll', hideEditorTooltip, true);
 
 // ============================================================
 // ОБНОВЛЕНИЕ UI
@@ -714,65 +772,6 @@ function updateScore(styleScore, grammarScore) {
   else scoreComment.textContent = '❌ Много словесного мусора';
 }
 
-function updateBadges(findings) {
-  const cats = ['stop', 'cliche', 'bureaucracy', 'amplifier', 'input', 'stamp', 'weak', 'vague', 'personal', 'possessive', 'biased', 'generalization', 'modal', 'time', 'spelling', 'grammar', 'style'];
-  errorsBadges.innerHTML = cats.map(cat => {
-    const items = findings[cat] || [];
-    const total = items.reduce((s, i) => s + i.count, 0);
-    const info = CAT_INFO[cat];
-    const empty = total === 0;
-    const active = activeDropdownCat === cat;
-    return `<div class="error-badge ${info.badge} ${empty ? 'empty' : ''} ${active ? 'active' : ''}"
-            data-cat="${cat}">
-      <span class="badge-dot"></span>
-      <span class="badge-name">${info.name}</span>
-      <span class="badge-count">${total}</span>
-    </div>`;
-  }).join('');
-
-  // Навешиваем обработчики на бейджи
-  errorsBadges.querySelectorAll('.error-badge').forEach(badge => {
-    badge.addEventListener('click', () => toggleDropdown(badge.dataset.cat));
-  });
-
-  if (activeDropdownCat) renderDropdown(activeDropdownCat);
-}
-
-function toggleDropdown(cat) {
-  const items = lastFindings[cat] || [];
-  const total = items.reduce((s, i) => s + i.count, 0);
-  if (total === 0) return;
-
-  if (activeDropdownCat === cat) {
-    activeDropdownCat = null;
-    errorDropdown.classList.remove('visible');
-    errorsBadges.querySelectorAll('.error-badge').forEach(b => b.classList.remove('active'));
-  } else {
-    activeDropdownCat = cat;
-    renderDropdown(cat);
-    errorDropdown.classList.add('visible');
-    errorsBadges.querySelectorAll('.error-badge').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
-  }
-}
-
-function renderDropdown(cat) {
-  const items = lastFindings[cat] || [];
-  const comment = COMMENTS[cat] || '';
-  if (items.length === 0) {
-    errorDropdownList.innerHTML = '<li style="padding:14px;text-align:center;color:var(--muted)">✓ Не найдено</li>';
-    return;
-  }
-  errorDropdownList.innerHTML = items.map(i => `
-    <li>
-      <div class="item-content">
-        <span class="word">${escapeHtml(i.word)}</span>
-        <span class="comment">${escapeHtml(comment)}</span>
-      </div>
-      <span class="count">×${i.count}</span>
-    </li>
-  `).join('');
-}
-
 function updateStats() {
   const text = editor.value;
   const trimmed = text.trim();
@@ -789,8 +788,6 @@ function clearText() {
   lastSpellingSuggestions = {};
   lastFindings = {};
   lastRenderedText = null;
-  activeDropdownCat = null;
-  errorDropdown.classList.remove('visible');
   editorWrapper.classList.remove('highlight-active');
   tooltip.classList.remove('visible');
   updateStats();
@@ -799,8 +796,6 @@ function clearText() {
 
 function loadExample() {
   editor.value = `На сегоднешний день данный продукт являеться очень уникальным и инновационным решением в рамках современного мира . Как показывает практика , очень важно обеспечить качественное обслуживание.Конечно,необходимо учитывать все ситуации и вопросы,которые могут возникнуть.`;
-  activeDropdownCat = null;
-  errorDropdown.classList.remove('visible');
   lastRenderedText = null;
   updateStats();
   runFullAnalysis();
@@ -817,9 +812,6 @@ function resetResults() {
   spellingStatus.textContent = '';
   lastFindings = {};
   lastRenderedText = null;
-  activeDropdownCat = null;
-  errorDropdown.classList.remove('visible');
-  errorsBadges.innerHTML = '';
   overlay.innerHTML = '';
   editorWrapper.classList.remove('highlight-active');
 }
@@ -831,12 +823,9 @@ editor.addEventListener('input', () => {
   updateStats();
   editorWrapper.classList.remove('highlight-active');
   clearTimeout(analysisTimer);
-  tooltip.classList.remove('visible');
-  if (activeDropdownCat) {
-    activeDropdownCat = null;
-    errorDropdown.classList.remove('visible');
-    errorsBadges.querySelectorAll('.error-badge').forEach(b => b.classList.remove('active'));
-  }
+  hideEditorTooltip();
+  blockTooltip();
+  syncOverlayGeometry();
   if (activeCheckType === 'style' || activeCheckType === 'regex') {
     analysisTimer = setTimeout(runFullAnalysis, 500);
   }
@@ -855,7 +844,6 @@ async function runSpellerOnly() {
   if (!text) {
     spellingStatus.textContent = '';
     lastFindings.spelling = [];
-    updateBadges(lastFindings);
     renderHighlight(editor.value);
     lastRenderedText = editor.value;
     return;
@@ -877,7 +865,6 @@ async function runSpellerOnly() {
   const grammarPercent = words > 0 ? (totalSpelling / words) * 100 : 0;
   const grammarScore = Math.max(0, Math.min(10, 10 - grammarPercent * 0.5));
   updateScore(10, grammarScore);
-  updateBadges(lastFindings);
   renderHighlight(editor.value);
   lastRenderedText = editor.value;
   editorWrapper.classList.add('highlight-active');
@@ -892,7 +879,6 @@ async function runLanguageToolOnly() {
   if (!text) {
     spellingStatus.textContent = '';
     lastFindings.style = [];
-    updateBadges(lastFindings);
     renderHighlight(editor.value);
     lastRenderedText = editor.value;
     return;
@@ -914,7 +900,6 @@ async function runLanguageToolOnly() {
   const grammarPercent = words > 0 ? (totalStyle / words) * 100 : 0;
   const grammarScore = Math.max(0, Math.min(10, 10 - grammarPercent * 0.5));
   updateScore(10, grammarScore);
-  updateBadges(lastFindings);
   renderHighlight(editor.value);
   lastRenderedText = editor.value;
   editorWrapper.classList.add('highlight-active');
@@ -936,40 +921,12 @@ document.getElementById('btn-lt').addEventListener('click', () => setActiveCheck
 
 // Мобильная обработка
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-  // Обработка кнопок тулбара
   document.querySelectorAll('.editor-toolbar button').forEach(btn => {
     btn.addEventListener('touchend', function (e) {
       e.preventDefault();
       btn.click();
     }, { passive: false });
   });
-
-  // Тап по пустому месту оверлея → переход в режим редактирования
-  overlay.addEventListener('touchstart', function (e) {
-    if (!editorWrapper.classList.contains('highlight-active')) return;
-    const mark = e.target.closest('mark');
-    if (!mark) {
-      // Тап не по слову — переключаемся в режим редактирования
-      e.preventDefault();
-      switchToEditMode();
-    }
-  }, { passive: false });
-
-  // Тап по проблемному слову → показ тултипа
-  overlay.addEventListener('touchend', function (e) {
-    const mark = e.target.closest('mark');
-    if (mark) {
-      e.preventDefault();
-      showTooltip(mark, e);
-    }
-  }, { passive: false });
-
-  // Скрытие тултипа при тапе вне его
-  document.addEventListener('touchstart', function (e) {
-    if (!e.target.closest('mark') && !e.target.closest('.custom-tooltip')) {
-      tooltip.classList.remove('visible');
-    }
-  }, { passive: true });
 }
 
 // Инициализация
