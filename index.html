@@ -45,7 +45,7 @@
         <textarea id="editor" placeholder="Вставьте или напишите текст…" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="privacy-note"></textarea>
       </div>
       <section class="issue-detail" id="issue-detail" aria-label="Пояснение к замечанию" hidden>
-        <div class="issue-body"><div id="issue-content" aria-live="polite"></div><button type="button" id="go-to-issue">К ошибке в тексте</button></div>
+        <div class="issue-body"><div id="issue-content" role="button" tabindex="0" aria-label="Перейти к замечанию" aria-live="polite"></div></div>
         <button type="button" id="close-issue" aria-label="Закрыть пояснение">×</button>
       </section>
     </main>
@@ -56,7 +56,11 @@
       <button type="button" id="btn-issue" aria-controls="issue-detail" aria-expanded="false" hidden></button>
     </footer>
   </div>
-  <p class="privacy-note" id="privacy-note">Стиль и правила работают на устройстве. Кнопки «Яндекс» и LanguageTool отправляют текст выбранному сервису.</p>
+  <p class="privacy-note" id="privacy-note">
+    Стиль и правила работают на устройстве. Онлайн-проверка отправляет текст выбранному сервису.
+    <a href="https://yandex.ru/dev/speller/" target="_blank" rel="noopener noreferrer">Проверка правописания: Яндекс.Спеллер</a>.
+  </p>
   <div class="custom-tooltip" id="tooltip" role="tooltip"><div class="custom-tooltip-content"></div></div>
+  <div class="selection-tooltip" id="selection-tooltip" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

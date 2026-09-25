@@ -128,25 +128,12 @@ const DICT = {
   vague: DICT_VAGUE
 };
 
-const CAT_INFO = {
-  stop: { name: 'Стоп-слова', badge: 'badge-stop' },
-  cliche: { name: 'Штампы', badge: 'badge-cliche' },
-  bureaucracy: { name: 'Канцелярит', badge: 'badge-bureaucracy' },
-  amplifier: { name: 'Усилители', badge: 'badge-amplifier' },
-  input: { name: 'Вводные', badge: 'badge-input' },
-  stamp: { name: 'Рекламные', badge: 'badge-stamp' },
-  weak: { name: 'Слабые', badge: 'badge-weak' },
-  vague: { name: 'Неопределённость', badge: 'badge-vague' },
-  personal: { name: 'Личное местоимение', badge: 'badge-personal' },
-  possessive: { name: 'Притяжательное местоимение', badge: 'badge-possessive' },
-  biased: { name: 'Необъективная оценка', badge: 'badge-biased' },
-  generalization: { name: 'Обобщение', badge: 'badge-generalization' },
-  modal: { name: 'Модальный глагол', badge: 'badge-modal' },
-  time: { name: 'Паразит времени', badge: 'badge-time' },
-  spelling: { name: '✏️ Орфография', badge: 'badge-spelling' },
-  grammar: { name: '📐 Грамматика', badge: 'badge-grammar' },
-  style: { name: '📝 Стиль', badge: 'badge-style' }
-};
+const SORTED_DICT = Object.fromEntries(
+  Object.entries(DICT).map(([category, words]) => [
+    category,
+    [...new Set(words.map(word => word.toLowerCase()))].sort((a, b) => b.length - a.length)
+  ])
+);
 
 const CAT_NAMES = {
   stop: 'Стоп-слово', cliche: 'Штамп/клише', bureaucracy: 'Канцелярит',
@@ -154,6 +141,10 @@ const CAT_NAMES = {
   weak: 'Слабая конструкция', vague: 'Неопределённость', personal: 'Личное местоимение',
   possessive: 'Притяжательное местоимение', biased: 'Необъективная оценка', modal: 'Модальный глагол', time: 'Паразит времени', spelling: '✏️ Орфография', grammar: '📐 Грамматика', style: '📝 Стиль и грамматика'
 };
+
+const YANDEX_SPELLER_URL = 'https://speller.yandex.net/services/spellservice.json/checkText';
+const LANGUAGE_TOOL_URL = 'https://api.languagetool.org/v2/check';
+const REQUEST_TIMEOUT_MS = 15000;
 
 // ============================================================
 // СОСТОЯНИЕ
@@ -180,8 +171,11 @@ let requestRevision = 0;
 let saveTimer = null;
 let draftDirty = false;
 let composing = false;
+let suppressSelectionTooltip = false;
 const spellingStatus = document.getElementById('spellingStatus');
 const tooltip = document.getElementById('tooltip');
+const selectionTooltip = document.getElementById('selection-tooltip');
+let selectionMirror = null;
 
 // ============================================================
 // УТИЛИТЫ
@@ -199,6 +193,43 @@ function getCatName(cat) {
   return CAT_NAMES[cat] || cat;
 }
 
+function formatRussianCount(number, one, few, many) {
+  const mod100 = number % 100;
+  const mod10 = number % 10;
+  const form = mod100 >= 11 && mod100 <= 14
+    ? many
+    : mod10 === 1
+      ? one
+      : mod10 >= 2 && mod10 <= 4
+        ? few
+        : many;
+  return `${number} ${form}`;
+}
+
+function splitTextIntoChunks(text, maxLength) {
+  const chunks = [];
+  let offset = 0;
+
+  while (offset < text.length) {
+    let end = Math.min(offset + maxLength, text.length);
+
+    if (end < text.length) {
+      const minimumBreak = offset + Math.floor(maxLength * 0.6);
+      for (let i = end; i > minimumBreak; i--) {
+        if (/\s/.test(text[i - 1])) {
+          end = i;
+          break;
+        }
+      }
+    }
+
+    chunks.push({ text: text.slice(offset, end), offset });
+    offset = end;
+  }
+
+  return chunks;
+}
+
 // ============================================================
 // СИНХРОНИЗАЦИЯ СКРОЛЛА
 // ============================================================
@@ -206,25 +237,43 @@ function syncOverlayGeometry() {
   overlay.style.right = 'auto';
   overlay.style.bottom = 'auto';
 
-  // Учитываем место, которое занимает полоса прокрутки textarea.
   overlay.style.width = `${editor.clientWidth}px`;
   overlay.style.height = `${editor.clientHeight}px`;
 
-  overlay.scrollTop = editor.scrollTop;
-  overlay.scrollLeft = editor.scrollLeft;
+  // У textarea больше нет собственной прокрутки.
+  overlay.scrollTop = 0;
+  overlay.scrollLeft = 0;
 }
 
-editor.addEventListener('scroll', () => {
-  syncOverlayGeometry();
-  hideEditorTooltip();
-});
+function resizeEditorToContent() {
+  /*
+   * Сначала уменьшаем поле, чтобы scrollHeight пересчитался.
+   * Это позволяет редактору как увеличиваться, так и уменьшаться
+   * после удаления текста.
+   */
+  editor.style.height = 'auto';
 
-const editorResizeObserver = new ResizeObserver(() => {
-  syncOverlayGeometry();
-  hideEditorTooltip();
-});
+  const minimumHeight = window.matchMedia('(max-width: 700px)').matches
+    ? 420
+    : 440;
 
-editorResizeObserver.observe(editor);
+  const newHeight = Math.max(
+    minimumHeight,
+    editor.scrollHeight
+  );
+
+  editor.style.height = `${newHeight}px`;
+
+  syncOverlayGeometry();
+}
+
+if ('ResizeObserver' in window) {
+  const editorResizeObserver = new ResizeObserver(() => {
+    syncOverlayGeometry();
+    hideEditorTooltip();
+  });
+  editorResizeObserver.observe(editor);
+}
 syncOverlayGeometry();
 
 // ============================================================
@@ -233,17 +282,14 @@ syncOverlayGeometry();
 function analyzeLocal(text) {
   const textLower = text.toLowerCase();
   const findings = {};
-  let totalIssues = 0;
 
-  for (const [cat, dict] of Object.entries(DICT)) {
+  for (const [cat, dict] of Object.entries(SORTED_DICT)) {
     if (!dict || dict.length === 0) { findings[cat] = []; continue; }
 
     const counts = {};
-    const sortedDict = [...dict].sort((a, b) => b.length - a.length);
-    const foundPositions = new Array(textLower.length).fill(false);
+    const foundPositions = new Uint8Array(textLower.length);
 
-    for (const word of sortedDict) {
-      const wordLower = word.toLowerCase();
+    for (const wordLower of dict) {
       let searchFrom = 0;
       while (true) {
         const idx = textLower.indexOf(wordLower, searchFrom);
@@ -258,8 +304,7 @@ function analyzeLocal(text) {
             if (foundPositions[i]) { overlaps = true; break; }
           }
           if (!overlaps) {
-            counts[word] = (counts[word] || 0) + 1;
-            totalIssues++;
+            counts[wordLower] = (counts[wordLower] || 0) + 1;
             for (let i = idx; i < idx + wordLower.length; i++) foundPositions[i] = true;
           }
         }
@@ -272,7 +317,7 @@ function analyzeLocal(text) {
       .map(([word, count]) => ({ word, count }));
   }
 
-  return { findings, totalIssues };
+  return { findings };
 }
 
 function analyzeGrammar(text) {
@@ -300,38 +345,43 @@ function analyzeGrammar(text) {
 async function checkSpelling(text) {
   if (!text.trim()) return { errors: [], suggestions: {} };
 
-  // Разбиваем текст на чанки по 9500 символов (с запасом до лимита 10000)
-  const chunkSize = 9500;
-  const chunks = [];
-  for (let i = 0; i < text.length; i += chunkSize) {
-    chunks.push(text.slice(i, i + chunkSize));
-  }
+  // Для POST Яндекс допускает до 10 000 символов.
+  const chunks = splitTextIntoChunks(text, 9500);
 
   const allErrors = [];
   const suggestions = {};
 
   try {
-    // Обрабатываем чанки последовательно, чтобы не перегружать API
+    // Последовательная обработка не создаёт всплеск запросов к публичному API.
     for (const chunk of chunks) {
-      const response = await fetch(
-        'https://speller.yandex.net/services/spellservice.json/checkText',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: 'text=' + encodeURIComponent(chunk) + '&lang=ru&options=5'
-        }
-      );
-      if (!response.ok) throw new Error('API error: ' + response.status);
-      const errors = await response.json();
-      allErrors.push(...errors);
+      let errors;
+
+      try {
+        errors = await requestYandexPost(chunk.text);
+      } catch {
+        errors = await requestYandexJsonpChunks(chunk.text);
+      }
+
+      for (const error of errors) {
+        allErrors.push({
+          ...error,
+          pos: chunk.offset + Number(error.pos || 0)
+        });
+      }
     }
 
-    // Группируем по словам
+    // Группируем для счётчика, сохраняя точные позиции каждого вхождения.
     const grouped = {};
     for (const err of allErrors) {
-      if (!grouped[err.word]) grouped[err.word] = { word: err.word, count: 0 };
-      grouped[err.word].count++;
-      suggestions[err.word.toLowerCase()] = err.s || [];
+      if (!err || typeof err.word !== 'string') continue;
+      const key = err.word.toLowerCase();
+      if (!grouped[key]) grouped[key] = { word: err.word, count: 0, _details: [] };
+      grouped[key].count++;
+      grouped[key]._details.push({
+        start: err.pos,
+        end: err.pos + Number(err.len || err.word.length)
+      });
+      suggestions[key] = Array.isArray(err.s) ? err.s : [];
     }
 
     return {
@@ -344,23 +394,102 @@ async function checkSpelling(text) {
   }
 }
 
+async function fetchJsonWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function requestYandexPost(text) {
+  const body = new URLSearchParams({ text, lang: 'ru', options: '5', format: 'plain' });
+  const data = await fetchJsonWithTimeout(YANDEX_SPELLER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+    body
+  });
+  if (!Array.isArray(data)) throw new Error('Некорректный ответ Яндекс.Спеллера');
+  return data;
+}
+
+function requestYandexJsonp(text) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `textredYandex_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement('script');
+    let settled = false;
+
+    const cleanup = () => {
+      script.remove();
+      try { delete window[callbackName]; } catch { window[callbackName] = undefined; }
+    };
+
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      cleanup();
+      callback(value);
+    };
+
+    const timeout = setTimeout(
+      () => finish(reject, new Error('Превышено время ожидания Яндекс.Спеллера')),
+      REQUEST_TIMEOUT_MS
+    );
+
+    window[callbackName] = data => {
+      if (!Array.isArray(data)) {
+        finish(reject, new Error('Некорректный JSONP-ответ Яндекс.Спеллера'));
+        return;
+      }
+      finish(resolve, data);
+    };
+
+    const params = new URLSearchParams({
+      text,
+      lang: 'ru',
+      options: '5',
+      format: 'plain',
+      callback: callbackName
+    });
+    script.src = `${YANDEX_SPELLER_URL}?${params}`;
+    script.async = true;
+    script.onerror = () => finish(reject, new Error('Не удалось загрузить JSONP Яндекс.Спеллера'));
+    document.head.appendChild(script);
+  });
+}
+
+async function requestYandexJsonpChunks(text) {
+  // GET ограничен длиной URL. 1000 символов безопасны и для кириллицы,
+  // которая занимает больше места после URL-кодирования.
+  const result = [];
+
+  for (const chunk of splitTextIntoChunks(text, 1000)) {
+    const errors = await requestYandexJsonp(chunk.text);
+    for (const error of errors) {
+      result.push({ ...error, pos: chunk.offset + Number(error.pos || 0) });
+    }
+  }
+
+  return result;
+}
+
 async function checkLanguageTool(text) {
   if (!text.trim()) return { errors: [] };
-  const chunks = [];
-  const chunkSize = 5000;
-  for (let i = 0; i < text.length; i += chunkSize) {
-    chunks.push({ text: text.slice(i, i + chunkSize), offset: i });
-  }
+  const chunks = splitTextIntoChunks(text, 5000);
   const allMatches = [];
   try {
     for (const chunk of chunks) {
-      const response = await fetch('https://api.languagetool.org/v2/check', {
+      const data = await fetchJsonWithTimeout(LANGUAGE_TOOL_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `text=${encodeURIComponent(chunk.text)}&language=ru-RU&enabledOnly=false`
       });
-      if (!response.ok) throw new Error('LanguageTool API error');
-      const data = await response.json();
       if (data.matches) {
         for (const m of data.matches) {
           const word = text.slice(chunk.offset + m.offset, chunk.offset + m.offset + m.length);
@@ -370,6 +499,8 @@ async function checkLanguageTool(text) {
             suggest: m.replacements && m.replacements.length > 0
               ? m.replacements.slice(0, 3).map(r => r.value).join(', ')
               : null,
+            start: chunk.offset + m.offset,
+            end: chunk.offset + m.offset + m.length,
             ruleId: m.rule.id,
             category: m.rule.category.name
           });
@@ -380,9 +511,10 @@ async function checkLanguageTool(text) {
     for (const m of allMatches) {
       const key = m.word.toLowerCase();
       if (!grouped[key]) {
-        grouped[key] = { word: m.word, count: 0, message: m.message, suggest: m.suggest };
+        grouped[key] = { word: m.word, count: 0, message: m.message, suggest: m.suggest, _details: [] };
       }
       grouped[key].count++;
+      grouped[key]._details.push({ start: m.start, end: m.end });
     }
     return { errors: Object.values(grouped).sort((a, b) => b.count - a.count) };
   } catch (e) {
@@ -406,7 +538,7 @@ function runFullAnalysis() {
   };
 
   if (activeCheckType === 'style') {
-    const { findings: localFindings } = analyzeLocal(trimmed);
+    const { findings: localFindings } = analyzeLocal(text);
     findings.stop = localFindings.stop || [];
     findings.cliche = localFindings.cliche || [];
     findings.bureaucracy = localFindings.bureaucracy || [];
@@ -458,6 +590,12 @@ function renderHighlight(text) {
   for (const [cat, items] of Object.entries(lastFindings)) {
     if (cat === 'grammar') continue;
     for (const item of items) {
+      if (Array.isArray(item._details)) {
+        for (const detail of item._details) {
+          marks.push({ start: detail.start, end: detail.end, cat });
+        }
+        continue;
+      }
       const wl = item.word.toLowerCase();
       let sf = 0;
       while (true) {
@@ -484,10 +622,11 @@ function renderHighlight(text) {
 
   marks.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
   const filtered = [];
+  let coveredUntil = -1;
   for (const m of marks) {
-    if (!filtered.some(f => (m.start >= f.start && m.start < f.end) || (m.end > f.start && m.end <= f.end))) {
-      filtered.push(m);
-    }
+    if (m.start < coveredUntil) continue;
+    filtered.push(m);
+    coveredUntil = m.end;
   }
   filtered.sort((a, b) => a.start - b.start);
 
@@ -656,6 +795,102 @@ function hideEditorTooltip() {
   tooltip.classList.remove('visible');
 }
 
+function hideSelectionTooltip() {
+  selectionTooltip.hidden = true;
+}
+
+function getSelectionRect(start, end) {
+  if (!selectionMirror) {
+    selectionMirror = document.createElement('div');
+    selectionMirror.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(selectionMirror);
+  }
+
+  const editorRect = editor.getBoundingClientRect();
+  const computed = getComputedStyle(editor);
+  const copiedProperties = [
+    'boxSizing', 'fontFamily', 'fontSize', 'fontStyle', 'fontWeight',
+    'fontVariant', 'fontStretch', 'lineHeight', 'letterSpacing', 'wordSpacing',
+    'tabSize', 'textAlign', 'textIndent', 'textTransform', 'paddingTop',
+    'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth',
+    'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth'
+  ];
+
+  selectionMirror.style.cssText = [
+    'position:fixed',
+    `left:${editorRect.left}px`,
+    `top:${editorRect.top}px`,
+    `width:${editorRect.width}px`,
+    'height:auto',
+    'min-height:0',
+    'overflow:hidden',
+    'visibility:hidden',
+    'pointer-events:none',
+    'white-space:pre-wrap',
+    'overflow-wrap:break-word',
+    'word-break:normal',
+    'z-index:-1'
+  ].join(';');
+
+  for (const property of copiedProperties) {
+    selectionMirror.style[property] = computed[property];
+  }
+
+  selectionMirror.replaceChildren();
+  selectionMirror.append(document.createTextNode(editor.value.slice(0, start)));
+
+  const selectedSpan = document.createElement('span');
+  selectedSpan.textContent = editor.value.slice(start, end) || '\u200b';
+  selectionMirror.append(selectedSpan);
+
+  const rects = selectedSpan.getClientRects();
+  return rects.length ? rects[rects.length - 1] : editorRect;
+}
+
+function updateSelectionTooltip() {
+  if (suppressSelectionTooltip) {
+    hideSelectionTooltip();
+    return;
+  }
+
+  const start = editor.selectionStart;
+  const end = editor.selectionEnd;
+
+  if (start === end) {
+    hideSelectionTooltip();
+    return;
+  }
+
+  const selectedText = editor.value.slice(start, end);
+  const trimmed = selectedText.trim();
+  const words = trimmed ? trimmed.split(/\s+/u).length : 0;
+  const characters = selectedText.length;
+
+  selectionTooltip.textContent = [
+    formatRussianCount(words, 'слово', 'слова', 'слов'),
+    formatRussianCount(characters, 'символ', 'символа', 'символов')
+  ].join(' · ');
+  selectionTooltip.hidden = false;
+  selectionTooltip.style.visibility = 'hidden';
+
+  const selectionRect = getSelectionRect(start, end);
+  const tooltipRect = selectionTooltip.getBoundingClientRect();
+  const edge = 12;
+  const gap = 8;
+
+  let left = selectionRect.left + selectionRect.width / 2 - tooltipRect.width / 2;
+  left = Math.max(edge, Math.min(left, window.innerWidth - tooltipRect.width - edge));
+
+  let top = selectionRect.top - tooltipRect.height - gap;
+  if (top < edge) top = selectionRect.bottom + gap;
+  top = Math.max(edge, Math.min(top, window.innerHeight - tooltipRect.height - edge));
+
+  selectionTooltip.style.left = `${left}px`;
+  selectionTooltip.style.top = `${top}px`;
+  selectionTooltip.style.visibility = '';
+  hideEditorTooltip();
+}
+
 function findMarkAtPoint(x, y) {
   for (const mark of overlay.querySelectorAll('mark')) {
     // У слова или фразы может быть несколько строк.
@@ -678,6 +913,7 @@ editor.addEventListener('pointermove', (event) => {
   if (
     event.pointerType !== 'mouse' ||
     event.buttons !== 0 ||
+    editor.selectionStart !== editor.selectionEnd ||
     tooltipBlocked ||
     !editorWrapper.classList.contains('highlight-active')
   ) {
@@ -707,6 +943,7 @@ editor.addEventListener('pointermove', (event) => {
 
 editor.addEventListener('pointerdown', () => {
   hideEditorTooltip();
+  hideSelectionTooltip();
   blockTooltip();
 
   // Не вызываем preventDefault():
@@ -720,8 +957,28 @@ editor.addEventListener('keydown', () => {
   blockTooltip();
 });
 
-window.addEventListener('resize', hideEditorTooltip);
-window.addEventListener('scroll', hideEditorTooltip, true);
+editor.addEventListener('select', updateSelectionTooltip);
+editor.addEventListener('keyup', updateSelectionTooltip);
+document.addEventListener('pointerdown', event => {
+  if (event.target !== editor) hideSelectionTooltip();
+});
+
+let resizeTimer = null;
+
+window.addEventListener('resize', () => {
+  hideEditorTooltip();
+  hideSelectionTooltip();
+
+  clearTimeout(resizeTimer);
+
+  resizeTimer = setTimeout(() => {
+    resizeEditorToContent();
+  }, 100);
+});
+window.addEventListener('scroll', () => {
+  hideEditorTooltip();
+  hideSelectionTooltip();
+}, true);
 
 // ============================================================
 // ОБНОВЛЕНИЕ UI
@@ -750,22 +1007,49 @@ function showNextIssue() {
   issueButton.setAttribute('aria-expanded', 'true');
   issueButton.textContent = `${issueIndex + 1} из ${marks.length} · следующее`;
   hideEditorTooltip();
-  goToCurrentIssue();
 }
 
 function goToCurrentIssue() {
   const marks = overlay.querySelectorAll('mark');
   const mark = marks[issueIndex];
+
   if (!mark) return;
-  const rect = mark.getClientRects()[0];
-  if (!rect) return;
-  const top = rect.top - overlay.getBoundingClientRect().top + overlay.scrollTop;
-  marks.forEach(item => item.classList.toggle('current-issue', item === mark));
-  editor.scrollIntoView({ block: 'center', behavior: 'instant' });
+
+  marks.forEach(item => {
+    item.classList.toggle(
+      'current-issue',
+      item === mark
+    );
+  });
+
+  const start = Number(mark.dataset.start);
+  const end = Number(mark.dataset.end);
+
+  /*
+   * Выделяем ошибку в настоящем textarea.
+   * preventScroll не позволяет focus() самостоятельно
+   * прыгнуть к началу редактора.
+   */
+  suppressSelectionTooltip = true;
   editor.focus({ preventScroll: true });
-  editor.setSelectionRange(Number(mark.dataset.start), Number(mark.dataset.end));
-  editor.scrollTop = Math.max(0, top - editor.clientHeight / 3);
-  syncOverlayGeometry();
+  editor.setSelectionRange(start, end);
+  setTimeout(() => { suppressSelectionTooltip = false; }, 0);
+
+  const reduceMotion = window.matchMedia(
+    '(prefers-reduced-motion: reduce)'
+  ).matches;
+
+  /*
+   * mark находится в overlay точно поверх соответствующего
+   * текста, поэтому scrollIntoView прокрутит всю страницу
+   * к нужной строке.
+   */
+  mark.scrollIntoView({
+    block: 'center',
+    inline: 'nearest',
+    behavior: reduceMotion ? 'auto' : 'smooth'
+  });
+
   hideEditorTooltip();
 }
 
@@ -773,7 +1057,10 @@ function updateStats() {
   const text = editor.value;
   const trimmed = text.trim();
   const words = trimmed ? trimmed.split(/\s+/).filter(w => w.length > 0).length : 0;
-  stats.textContent = `${words} слов · ${text.length} знаков`;
+  stats.textContent = [
+    formatRussianCount(words, 'слово', 'слова', 'слов'),
+    formatRussianCount(text.length, 'знак', 'знака', 'знаков')
+  ].join(' · ');
   document.getElementById('btn-example').hidden = text.length > 0;
 }
 
@@ -806,6 +1093,7 @@ function updateThemeButtons() {
 
 function loadExample() {
   editor.value = 'На сегоднешний день данный продукт являеться очень уникальным решением. Как показывает практика , важно обеспечить качественное обслуживание.Конечно,необходимо учитывать все ситуации.';
+  resizeEditorToContent();
   updateStats();
   scheduleDraftSave();
   // Загрузка примера сама по себе не отправляет текст в сеть.
@@ -830,8 +1118,9 @@ function handleInput() {
   clearTimeout(analysisTimer);
   updateStats();
   resetResults();
+  hideSelectionTooltip();
   blockTooltip();
-  syncOverlayGeometry();
+  resizeEditorToContent();
   scheduleDraftSave();
   if (!editor.value.trim()) return;
   if (activeCheckType === 'style' || activeCheckType === 'regex') {
@@ -881,13 +1170,23 @@ document.getElementById('theme-dark').addEventListener('click', () => {
   window.TextredStorage.saveTheme('dark');
   updateThemeButtons();
 });
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateThemeButtons);
+const colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+if (typeof colorSchemeQuery.addEventListener === 'function') {
+  colorSchemeQuery.addEventListener('change', updateThemeButtons);
+} else if (typeof colorSchemeQuery.addListener === 'function') {
+  colorSchemeQuery.addListener(updateThemeButtons);
+}
 window.addEventListener('pagehide', persistDraft);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') persistDraft();
 });
-document.getElementById('go-to-issue').addEventListener('click', goToCurrentIssue);
 document.getElementById('issue-content').addEventListener('click', goToCurrentIssue);
+document.getElementById('issue-content').addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    goToCurrentIssue();
+  }
+});
 document.getElementById('btn-example').addEventListener('click', loadExample);
 document.getElementById('btn-style').addEventListener('click', () => setActiveCheck('style'));
 document.getElementById('btn-regex').addEventListener('click', () => setActiveCheck('regex'));
@@ -910,8 +1209,12 @@ document.addEventListener('keydown', event => {
 const restoredDraft = window.TextredStorage.restoreDraft();
 if (restoredDraft !== null) {
   editor.value = restoredDraft;
-  document.getElementById('save-status').textContent = 'Черновик восстановлен';
+
+  document.getElementById('save-status').textContent =
+    'Черновик восстановлен';
 }
+
+resizeEditorToContent();
 updateThemeButtons();
 updateStats();
 setActiveCheck('style');
