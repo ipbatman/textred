@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="ru">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,11 +15,14 @@
   <link rel="stylesheet" href="style.css">
   <script src="script.js" defer></script>
 </head>
+
 <body>
   <div class="app">
     <header class="app-header">
-      <h1>текстред<span aria-hidden="true"> /</span></h1>
-      <p>Меньше лишнего. Больше смысла.</p>
+      <div class="brand">
+        <h1>ТекстРед</h1>
+        <p>Меньше лишнего. Больше смысла.</p>
+      </div>
       <div class="theme-switch" role="group" aria-label="Цветовая тема">
         <button type="button" id="theme-light" aria-pressed="false">День</button>
         <button type="button" id="theme-dark" aria-pressed="false">Ночь</button>
@@ -26,26 +30,35 @@
     </header>
     <nav class="editor-toolbar" aria-label="Выбрать и запустить проверку">
       <div class="check-group">
-        <div class="check-buttons"><button type="button" class="check-btn active" id="btn-style" aria-pressed="true" aria-describedby="style-help">Стиль</button></div>
+        <div class="check-buttons"><button type="button" class="check-btn active" id="btn-style" aria-pressed="true"
+            aria-describedby="style-help">Стиль</button></div>
         <p id="style-help">Лишние слова и штампы</p>
       </div>
       <div class="check-group">
-        <div class="check-buttons"><button type="button" class="check-btn" id="btn-regex" aria-pressed="false" aria-describedby="rules-help">Правила</button></div>
+        <div class="check-buttons"><button type="button" class="check-btn" id="btn-regex" aria-pressed="false"
+            aria-describedby="rules-help">Правила</button></div>
         <p id="rules-help">Пробелы и пунктуация</p>
       </div>
       <div class="check-group">
-        <div class="check-buttons"><button type="button" class="check-btn" id="btn-speller" aria-pressed="false" aria-describedby="online-help">Яндекс</button><button type="button" class="check-btn" id="btn-lt" aria-pressed="false" aria-describedby="online-help">LanguageTool</button></div>
+        <div class="check-buttons"><button type="button" class="check-btn" id="btn-speller" aria-pressed="false"
+            aria-describedby="online-help">Яндекс</button><button type="button" class="check-btn" id="btn-lt"
+            aria-pressed="false" aria-describedby="online-help">LanguageTool</button></div>
         <p id="online-help">Орфография и грамматика · онлайн</p>
       </div>
     </nav>
     <main>
-      <div class="document-heading"><label for="editor">Ваш текст</label><button type="button" id="btn-example">Попробовать пример</button></div>
+      <div class="document-heading"><label for="editor">Ваш текст</label><button type="button"
+          id="btn-example">Попробовать пример</button></div>
       <div class="editor-wrapper" id="editorWrapper">
+        <div id="editor-measure" aria-hidden="true"></div>
         <div id="overlay" aria-hidden="true"></div>
-        <textarea id="editor" placeholder="Вставьте или напишите текст…" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="privacy-note"></textarea>
+        <textarea id="editor" placeholder="Вставьте или напишите текст…" spellcheck="false" autocapitalize="off"
+          autocomplete="off" aria-describedby="privacy-note"></textarea>
       </div>
       <section class="issue-detail" id="issue-detail" aria-label="Пояснение к замечанию" hidden>
-        <div class="issue-body"><div id="issue-content" role="button" tabindex="0" aria-label="Перейти к замечанию" aria-live="polite"></div></div>
+        <div class="issue-body">
+          <div id="issue-content" role="button" tabindex="0" aria-label="Перейти к замечанию" aria-live="polite"></div>
+        </div>
         <button type="button" id="close-issue" aria-label="Закрыть пояснение">×</button>
       </section>
     </main>
@@ -58,9 +71,13 @@
   </div>
   <p class="privacy-note" id="privacy-note">
     Стиль и правила работают на устройстве. Онлайн-проверка отправляет текст выбранному сервису.
-    <a href="https://yandex.ru/dev/speller/" target="_blank" rel="noopener noreferrer">Проверка правописания: Яндекс.Спеллер</a>.
+    <a href="https://yandex.ru/dev/speller/" target="_blank" rel="noopener noreferrer">Проверка правописания:
+      Яндекс.Спеллер</a>.
   </p>
-  <div class="custom-tooltip" id="tooltip" role="tooltip"><div class="custom-tooltip-content"></div></div>
+  <div class="custom-tooltip" id="tooltip" role="tooltip">
+    <div class="custom-tooltip-content"></div>
+  </div>
   <div class="selection-tooltip" id="selection-tooltip" role="status" aria-live="polite" hidden></div>
 </body>
+
 </html>

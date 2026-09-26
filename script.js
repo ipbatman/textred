@@ -245,25 +245,11 @@ function syncOverlayGeometry() {
   overlay.scrollLeft = 0;
 }
 
+const editorMeasure = document.getElementById('editor-measure');
+
 function resizeEditorToContent() {
-  /*
-   * Сначала уменьшаем поле, чтобы scrollHeight пересчитался.
-   * Это позволяет редактору как увеличиваться, так и уменьшаться
-   * после удаления текста.
-   */
-  editor.style.height = 'auto';
-
-  const minimumHeight = window.matchMedia('(max-width: 700px)').matches
-    ? 420
-    : 440;
-
-  const newHeight = Math.max(
-    minimumHeight,
-    editor.scrollHeight
-  );
-
-  editor.style.height = `${newHeight}px`;
-
+  // Последний символ сохраняет высоту пустой строки после переноса.
+  editorMeasure.textContent = editor.value + '\u200b';
   syncOverlayGeometry();
 }
 
@@ -921,6 +907,30 @@ editor.addEventListener('pointermove', (event) => {
     return;
   }
 
+  editor.addEventListener('pointerup', event => {
+    if (event.pointerType !== 'touch') return;
+
+    const x = event.clientX;
+    const y = event.clientY;
+
+    // Даём браузеру закончить установку курсора или выделения.
+    setTimeout(() => {
+      if (editor.selectionStart !== editor.selectionEnd) {
+        updateSelectionTooltip();
+        return;
+      }
+
+      if (!editorWrapper.classList.contains('highlight-active')) return;
+
+      const mark = findMarkAtPoint(x, y);
+      if (!mark) return;
+
+      clearTimeout(tooltipBlockTimer);
+      tooltipBlocked = false;
+      showTooltip(mark);
+    }, 180);
+  });
+
   const mark = findMarkAtPoint(event.clientX, event.clientY);
 
   if (mark === hoveredMark) return;
@@ -950,7 +960,9 @@ editor.addEventListener('pointerdown', () => {
   // браузер сам устанавливает курсор и начинает выделение.
 });
 
-editor.addEventListener('pointerleave', hideEditorTooltip);
+editor.addEventListener('pointerleave', event => {
+  if (event.pointerType === 'mouse') hideEditorTooltip();
+});
 
 editor.addEventListener('keydown', () => {
   hideEditorTooltip();
