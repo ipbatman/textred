@@ -484,15 +484,6 @@ main {
   #editor,
   #overlay,
   #editor-measure {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: auto;
-    min-height: 0;
-    overflow: hidden;
-    visibility: hidden;
-    pointer-events: none;
-    border: 0;
     padding: 20px 18px;
     font-size: 17px;
     line-height: 1.7;
